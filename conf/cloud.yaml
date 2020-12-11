@@ -1,0 +1,14 @@
+# How to connect to Oracle
+oracleConnection:
+  connectString: oracledb
+  user: proofable
+  password: myLongPassword23
+oracleTables:
+  - PROOFABLEDEMO.CONTRACTSTABLE
+anchorType: HEDERA_MAINNET
+dbmsAlert: TRUE
+proofable:
+#  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDMxNTA4OTIsImp0aSI6IkRtSHd5Q05TSUVZTERrYlk3dE1DWXRHVExabDFMQjM2S2lmbWtDN1JDNGs9Iiwic3ViIjoidTQ0eGl0dXhjbHZkdXRrNzg0aDI3cTlqIn0.ujgEZKfWn4Db4C-8geggu9fOUuS6B4iTpgkDuETwx0w
+#  endpoint: api.dev.proofable.io:443
+   token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDQwMTk3NTgsImp0aSI6Im14NnlZOVpqN1dLakdiMGlXdGlhQUdzSE0yM0lpVDZ1c2FkMXBNQkE2S009Iiwic3ViIjoidTQ0eGl0dXhjbHZkdXRrNzg0aDI3cTlqIn0.ahYWFc8arehKKz6ivrJl7hjukB5j333QGJUpM3Dsfc8
+   endpoint: api.proofable.io:443

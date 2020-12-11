@@ -1,0 +1,44 @@
+{
+  "name": "proofable-db-connectors",
+  "version": "1.0.0",
+  "description": "",
+  "dependencies": {
+    "-": "^0.0.1",
+    "assert": "^2.0.0",
+    "command-line-args": "^5.1.1",
+    "command-line-usage": "^6.1.0",
+    "crypto": "^1.0.1",
+    "fs": "0.0.1-security",
+    "g": "^2.0.1",
+    "global": "^4.4.0",
+    "js-yaml": "^3.14.0",
+    "json-stringify-safe": "^5.0.1",
+    "oracledb": "^5.0.0",
+    "pkg": "^4.4.9",
+    "proofable": "^0.2.16",
+    "simple-node-logger": "^18.12.24",
+    "sprintf-js": "^1.1.2",
+    "tmp": "^0.2.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.12.1",
+    "@babel/core": "^7.12.3",
+    "@babel/preset-env": "^7.12.1",
+    "babel-eslint": "^10.1.0",
+    "eslint": "^7.11.0",
+    "eslint-config-airbnb": "^18.2.0",
+    "eslint-config-standard": "^7.1.0",
+    "eslint-plugin-import": "*",
+    "eslint-plugin-jsx-a11y": "^6.3.1",
+    "eslint-plugin-promise": "^3.5.0",
+    "eslint-plugin-react": "*",
+    "eslint-plugin-standard": "^2.1.1"
+  },
+  "scripts": {
+    "dev": "node src/app.js",
+    "build": "babel src -d lib",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Guy Harrison",
+  "license": "GPL"
+}

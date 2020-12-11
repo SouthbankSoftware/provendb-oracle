@@ -1,0 +1,95 @@
+{
+  "name": "provendb-oracle",
+  "description": "ProvenDB Connector for Oracle",
+  "version": "0.0.0",
+  "author": "Guy Harrison",
+  "bin": {
+    "provendb-oracle": "./bin/run"
+  },
+  "bugs": "https://github.com/michaeljharrison/proofable-oracle/issues",
+  "dependencies": {
+    "@babel/preset-env": "^7.12.1",
+    "@oclif/command": "^1",
+    "@oclif/config": "^1",
+    "@oclif/plugin-autocomplete": "^0.2.0",
+    "@oclif/plugin-help": "^3",
+    "@oclif/plugin-not-found": "^1.2.4",
+    "adm-zip": "^0.4.16",
+    "jest": "^26.6.3",
+    "js-yaml": "^3.14.0",
+    "json-stringify-safe": "^5.0.1",
+    "makensis": "^0.21.3",
+    "oracledb": "^5.0.0",
+    "password-prompt": "^1.1.2",
+    "proofable": "^0.2.16",
+    "simple-node-logger": "^18.12.24",
+    "sprintf-js": "^1.1.2",
+    "tmp": "^0.2.1"
+  },
+  "devDependencies": {
+    "@babel/cli": "^7.12.1",
+    "@babel/core": "^7.12.3",
+    "@oclif/dev-cli": "^1",
+    "@oclif/test": "^1",
+    "babel-eslint": "^10.1.0",
+    "babel-polyfill": "^6.26.0",
+    "chai": "^4",
+    "eslint": "^7.4.0",
+    "eslint-config-airbnb": "^18.2.0",
+    "eslint-config-oclif": "^3.1",
+    "eslint-config-prettier": "^6.15.0",
+    "eslint-loader": "^4.0.2",
+    "eslint-plugin-babel": "^5.3.1",
+    "eslint-plugin-import": "^2.22.0",
+    "eslint-plugin-jsx-a11y": "^6.3.1",
+    "eslint-plugin-prettier": "^3.1.4",
+    "eslint-plugin-react": "^7.20.3",
+    "eslint-plugin-react-hooks": "^4.0.8",
+    "globby": "^10",
+    "mocha": "^5",
+    "nyc": "^14",
+    "prettier": "^2.0.5",
+    "prettier-eslint": "^11.0.0",
+    "prettier-eslint-cli": "^5.0.0",
+    "regenerator-runtime": "^0.13.7"
+  },
+  "engines": {
+    "node": ">=8.0.0"
+  },
+  "files": [
+    "/bin",
+    "/npm-shrinkwrap.json",
+    "/oclif.manifest.json",
+    "/src"
+  ],
+  "homepage": "https://github.com/michaeljharrison/proofable-oracle",
+  "keywords": [
+    "oclif"
+  ],
+  "license": "GPL",
+  "main": "src/index.js",
+  "oclif": {
+    "macos": {
+      "identifier": "com.provendb.oracle"
+    },
+    "commands": "./src/commands",
+    "bin": "provendb-oracle",
+    "plugins": [
+      "@oclif/plugin-help",
+      "@oclif/plugin-not-found",
+      "@oclif/plugin-autocomplete"
+    ]
+  },
+  "repository": "michaeljharrison/proofable-oracle",
+  "scripts": {
+    "postpack": "rm -f oclif.manifest.json",
+    "build": "oclif-dev pack:win && oclif-dev pack:macos && oclif-dev pack:deb",
+    "build:win": "oclif-dev pack:win",
+    "build:mac": "oclif-dev pack:macos",
+    "build:deb": "oclif-dev pack:deb",
+    "prepack": "oclif-dev manifest && oclif-dev readme",
+    "testo": "nyc mocha --forbid-only \"test/**/*.test.js\"",
+    "test": "MODE=local jest  --runInBand --forceExit --detectOpenHandles",
+    "version": "oclif-dev readme && git add README.md"
+  }
+}
