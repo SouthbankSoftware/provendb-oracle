@@ -1,8 +1,7 @@
- # @Author: Michael Harrison (Mike@Southbanksoftware.com)
- # @Date:   2020-03-06T10:03:21+11:00
- # @Last modified by:   Michael Harrison
- # @Last modified time: 2020-03-06T10:32:08+11:00
-
+# @Author: Michael Harrison (Mike@Southbanksoftware.com)
+# @Date:   2020-03-06T10:03:21+11:00
+# @Last modified by:   Michael Harrison
+# @Last modified time: 2020-03-06T10:32:08+11:00
 
 # update pipeline:
 # fly -t dev sp -c pipeline-deploy.yml -p provendb-oracle-deploy
@@ -38,7 +37,7 @@ resources:
     source:
       repository: SouthbankSoftware/provendb-oracle
       access_token: ((common.git-access-token))
-      branch: master
+      branch: main
       context: deploy
   - name: provendb-oracle
     type: git
@@ -46,7 +45,7 @@ resources:
     webhook_token: ((common.webhook-token))
     source:
       uri: https://github.com/SouthbankSoftware/provendb-oracle.git
-      branch: master
+      branch: main
       username: ((common.git-username))
       password: ((common.git-password))
       disable_ci_skip: false
