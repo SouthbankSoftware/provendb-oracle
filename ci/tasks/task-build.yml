@@ -1,12 +1,12 @@
-  # @Author: Michael Harrison (Mike@Southbanksoftware.com)
- # @Date:   2020-03-06T10:03:40+11:00
- # @Last modified by:   Michael Harrison
- # @Last modified time: 2020-03-06T10:05:54+11:00
+# @Author: Michael Harrison (Mike@Southbanksoftware.com)
+# @Date:   2020-03-06T10:03:40+11:00
+# @Last modified by:   Michael Harrison
+# @Last modified time: 2020-03-06T10:05:54+11:00
 
 platform: linux
 image_resource:
   type: docker-image
-  source: { repository: golang, tag: 1.13.8 }
+  source: { repository: node, tag: 12 }
 inputs:
   - name: version
   - name: provendb-oracle
@@ -22,4 +22,4 @@ run:
       export APP_VERSION=$(cat version/number)
       git config --global url."https://${GIT_ACCESS_TOKEN}:@github.com/".insteadOf "https://github.com/"
       cd provendb-oracle
-      yarn build
+      npm build
