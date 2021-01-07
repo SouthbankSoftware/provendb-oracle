@@ -1,0 +1,11 @@
+oracleConnection:
+  connectString: testDb
+  user: provendb
+  password: DBEnvy2016
+oracleTables:
+  - username.tablename
+anchorType: HEDERA_MAINNET
+dbmsAlert: 'TRUE'
+proofable:
+  token: YourTokenHere
+  endpoint: 'api.proofable.io:443'
