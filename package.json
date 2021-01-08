@@ -92,6 +92,7 @@
   "repository": "michaeljharrison/proofable-oracle",
   "scripts": {
     "postpack": "rm -f oclif.manifest.json",
+    "pack": "oclif-dev pack",
     "build": "oclif-dev pack:win && oclif-dev pack:macos && oclif-dev pack:deb",
     "build:win": "oclif-dev pack:win",
     "build:mac": "oclif-dev pack:macos",
