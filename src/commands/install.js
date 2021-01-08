@@ -50,7 +50,7 @@ class InstallCommand extends Command {
             const sysConnection = await connectToOracleSYS(oracleConnect, sysPassword, verbose);
             await installPDB4O(oracleConnect, sysConnection, provendbUser,provendbPassword, dropExisting, createDemoAccount, verbose);
             if (flags.config) {
-                await saveConfig(flags.config, oracleConnect, provendbPassword);
+                await saveConfig(flags.config, provendbUser, oracleConnect, provendbPassword);
             }
         } catch (error) {
             log.error('Failed to install:');

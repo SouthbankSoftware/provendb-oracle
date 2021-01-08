@@ -71,14 +71,14 @@ module.exports = {
         return (config);
     },
     // Save current configuration to the configuration file (unimplemented)
-    saveConfig: async (fileName, oracleConnection, provendbPassword, verbose = false) => {
+    saveConfig: async (fileName, provendbUser, oracleConnection, provendbPassword, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
         const config = {
             oracleConnection: {
                 connectString: oracleConnection,
-                user: 'provendb',
+                user: provendbUser,
                 password: provendbPassword
             },
             oracleTables: ['username.tablename'],

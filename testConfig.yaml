@@ -1,11 +1,13 @@
 oracleConnection:
   connectString: testDb
-  user: provendb
+  user: provendbtest
   password: DBEnvy2016
 oracleTables:
-  - username.tablename
-anchorType: HEDERA_MAINNET
+  - PROVENDBTESTDEMO.CONTRACTSTABLE
+  - PROVENDBTESTDEMO.CONTRACTSTABLEFBDA
+anchorType: HEDERA
 dbmsAlert: 'TRUE'
 proofable:
-  token: YourTokenHere
-  endpoint: 'api.proofable.io:443'
+  token: >-
+    eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDU3NDQ1NDUsImp0aSI6IjBRUHhBSG9XQzl1Y0ZNSjlBMUVjWFBJZUpTTlpmME84T3hDWjhkNWlTYzQ9Iiwic3ViIjoidTQ0eGl0dXhjbHZkdXRrNzg0aDI3cTlqIn0.TJUqKzHz-r-AxQcwF3ib810BVmkLTDLSfxNWVMPC2zE
+  endpoint: 'api.dev.proofable.io:443'

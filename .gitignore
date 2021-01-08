@@ -118,3 +118,5 @@ Oracle/oracleProofable-win.exe
 *.proof
 
 *.provendb
+
+testConfig.yaml

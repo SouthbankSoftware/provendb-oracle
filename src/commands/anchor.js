@@ -1,3 +1,5 @@
+/* eslint no-await-in-loop:0 */
+/* eslint no-plusplus:0 */
 const {
     Command,
     flags
