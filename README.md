@@ -19,7 +19,7 @@ $ npm install -g provendb-oracle
 $ provendb-oracle COMMAND
 running command...
 $ provendb-oracle (-v|--version|version)
-provendb-oracle/0.0.0 darwin-x64 node-v12.18.1
+provendb-oracle/0.0.0 linux-x64 node-v12.20.1
 $ provendb-oracle --help [COMMAND]
 USAGE
   $ provendb-oracle COMMAND
@@ -158,7 +158,9 @@ OPTIONS
 
 DESCRIPTION
   ...
-  Extra documentation goes here
+  Monitor checks tables listed in the configuration file for changes.   
+  Any changes to rows found will be anchored to the blockchain defined
+  in the configuration file.
 ```
 
 _See code: [src/commands/monitor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.0.0/src/commands/monitor.js)_
