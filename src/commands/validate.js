@@ -25,7 +25,7 @@ const {
 // TODO: Out of memory errors
 // TODO: Support for blockchain table types
 
-// TODO: Should support a validate against a specific row proof (provide trie and rowId together)
+// TODO: Should support a validate against a specific row proof (provide trie and rowid together)
 // TODO: Validate fails if the proof was anchored with --includeScn
 // TODO: If no output file selected, writes to 'undefined.provendb'
 
@@ -38,7 +38,7 @@ class ValidateCommand extends Command {
             } = this.parse(ValidateCommand);
 
             const {
-                rowId,
+                rowid,
                 proofId,
                 verbose
             } = flags;
@@ -46,11 +46,11 @@ class ValidateCommand extends Command {
             if (flags.output) {
                 outputFile = flags.output;
             } else {
-                outputFile = `${rowId}.provendb`;
+                outputFile = `${rowid}.provendb`;
             }
 
-            if (!(rowId || proofId)) {
-                throw new Error('Must specify either a rowId or a proofId;  try --help');
+            if (!(rowid || proofId)) {
+                throw new Error('Must specify either a rowid or a proofId;  try --help');
             }
 
 
@@ -68,9 +68,9 @@ class ValidateCommand extends Command {
 
             // Command Specific Logic:
 
-            if (rowId) {
-                log.info(`Validating row: ${rowId}`);
-                await validateRow(rowId, outputFile, verbose);
+            if (rowid) {
+                log.info(`Validating row: ${rowid}`);
+                await validateRow(rowid, outputFile, verbose);
                 log.info('Row proof written to ', outputFile);
             }
             if (proofId) {
@@ -87,7 +87,7 @@ class ValidateCommand extends Command {
     }
 }
 
-ValidateCommand.description = `Validate a rowId against the most recent proof.
+ValidateCommand.description = `Validate Oracle data against a blockchain proof
 
 Validate compares the data in the database (or in the flashback archive) to the 
 digital signature (hash value) that was created when the row was anchored.  It then
@@ -99,7 +99,7 @@ proof file can serve as an independent proof of the data.
 // TODO: Schema should use ProofId, not TrieId.
 
 ValidateCommand.flags = {
-    rowId: flags.string({
+    rowid: flags.string({
         string: 'r',
         description: 'row ID to validate',
         required: false,

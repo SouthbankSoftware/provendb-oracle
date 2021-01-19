@@ -159,8 +159,8 @@ const validateRow = async (rowidKey) => {
 
     // generate a rowProof based on the trie and current data
     const rowProof = await generateRowProof(rowData, trie, proofId, proofFile, dotFile);
-    if (rowProof.keyValues.total === rowProof.keyValues.passed
-        && rowProof.keyValues.passed === 1) {
+    if (rowProof.keyValues.total === rowProof.keyValues.passed &&
+        rowProof.keyValues.passed === 1) {
         log.info('Rowid validation passed ', rowProof.keyValues);
     } else {
         log.error('Rowid Validate FAILED! ', rowProof.keyValues);
@@ -308,12 +308,12 @@ const listEntries = async (rowid) => {
             sqlText, [rowidPattern],
         );
         if (result.rows.length === 0) {
-            log.info('No matching rowIds found');
+            log.trace(`No matching rowIds found for ${rowid}`);
         } else {
-            const format = '%-32s %-25s %-25s';
-            console.log(sprintf(format, 'key', 'startDate', 'endDate'));
+            const format = '%-12s %-32s %-25s %-25s';
+            console.log(sprintf(format, 'Rowid', 'key', 'startDate', 'endDate'));
             result.rows.forEach((row) => {
-                console.log(row[0], row[2], row[3]);
+                console.log(rowid, row[0], row[2], row[3]);
             });
         }
     } catch (error) {
@@ -829,64 +829,64 @@ const registeredTableQuery = (tableName) => {
 
 // Get table data for a specific SCN range 
 const getTableData = async (tableName, tableDef, lastProofableAnchor, currentScn, adHoc) => {
-  
-        let sqlText;
-        let startScn = currentScn;
-        let result;
 
-        if (adHoc) {
-            sqlText = firstTimeTableQuery(tableName);
-            startScn = currentScn;
+    let sqlText;
+    let startScn = currentScn;
+    let result;
+
+    if (adHoc) {
+        sqlText = firstTimeTableQuery(tableName);
+        startScn = currentScn;
+    } else {
+        if (lastProofableAnchor.tableRegistered) {
+            sqlText = registeredTableQuery(tableName);
         } else {
-            if (lastProofableAnchor.tableRegistered) {
-                sqlText = registeredTableQuery(tableName);
-            } else {
-                sqlText = firstTimeTableQuery(tableName);
-            }
-            log.trace('last max scn ', lastProofableAnchor.maxEndScn);
-
-            if (lastProofableAnchor.maxEndScn !== null && lastProofableAnchor.maxEndScn > 0) {
-                startScn = lastProofableAnchor.maxEndScn;
-                // This is a second scan
-            }
-            log.info('Start SCN=', startScn, ' current SCN=', currentScn);
+            sqlText = firstTimeTableQuery(tableName);
         }
-        log.trace(sqlText);
-        /* This logic might be needed later 
-           result = await oraConnection.execute(
-            noFBDASQL, {
-                starttime: {
-                    type: oracledb.DB_TYPE_TIMESTAMP_TZ,
-                    val: starttime
-                }
+        log.trace('last max scn ', lastProofableAnchor.maxEndScn);
+
+        if (lastProofableAnchor.maxEndScn !== null && lastProofableAnchor.maxEndScn > 0) {
+            startScn = lastProofableAnchor.maxEndScn;
+            // This is a second scan
+        }
+        log.info('Start SCN=', startScn, ' current SCN=', currentScn);
+    }
+    log.trace(sqlText);
+    /* This logic might be needed later 
+       result = await oraConnection.execute(
+        noFBDASQL, {
+            starttime: {
+                type: oracledb.DB_TYPE_TIMESTAMP_TZ,
+                val: starttime
             }
-        ); */
-        try {
-             result = await oraConnection.execute(
+        }
+    ); */
+    try {
+        result = await oraConnection.execute(
+            sqlText, {
+                startscn: startScn,
+                currentscn: currentScn
+            }
+        );
+    } catch (error) {
+        log.error(error.message);
+        if (error.errorNum === 30052) {
+            // We don't have flashback data since the last monitored sample
+            log.error('Insufficient flashback history to capture all changes since last sample');
+            log.info('Attempting to retrieve current state');
+            sqlText = firstTimeTableQuery(tableName);
+            result = await oraConnection.execute(
                 sqlText, {
-                    startscn: startScn,
+                    startscn: currentScn,
                     currentscn: currentScn
                 }
             );
-        } catch (error) {
-            log.error(error.message);
-            if (error.errorNum === 30052) {
-                // We don't have flashback data since the last monitored sample
-                log.error('Insufficient flashback history to capture all changes since last sample');
-                log.info('Attempting to retrieve current state');
-                sqlText = firstTimeTableQuery(tableName);
-                result = await oraConnection.execute(
-                    sqlText, {
-                        startscn: currentScn,
-                        currentscn: currentScn
-                    }
-                ); 
-            }
-
         }
-        // log.trace('Table Data ', result);
 
-        return result;
+    }
+    // log.trace('Table Data ', result);
+
+    return result;
 
 };
 

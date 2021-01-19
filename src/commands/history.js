@@ -1,4 +1,8 @@
 const {
+    sprintf
+} = require('sprintf-js');
+
+const {
     Command,
     flags
 } = require('@oclif/command');
@@ -14,6 +18,8 @@ const {
     getConfig
 } = require('../services/config');
 
+
+
 // TODO: Allow history to take a table and where clause criteria
 
 class HistoryCommand extends Command {
@@ -25,17 +31,20 @@ class HistoryCommand extends Command {
             } = this.parse(HistoryCommand);
 
             const {
-                rowId,
+                rowid,
                 tables,
                 where,
                 verbose
             } = flags;
 
-            if (!tables && !rowId) {
-                throw new Error('Must specify either rowId or tables argument, try --help');
+            if (!tables && !rowid) {
+                throw new Error('Must specify either rowid or tables argument, try --help');
+            }
+            if (tables && rowid) {
+                throw new Error('Must specify only one of rowid or tables argument, try --help');
             }
 
-            log.info(`Listing versions for: ${rowId}`);
+
 
             // Load Config
             const config = await getConfig(flags.config);
@@ -49,14 +58,14 @@ class HistoryCommand extends Command {
             await connectToOracle(config, verbose);
 
             // Command Specific Logic:
-            if (rowId) {
-                await listEntries(rowId);
+            if (rowid) {
+                await listEntries(rowid);
             }
             if (tables) {
               await listTableEntries(tables, where);
             }
         } catch (error) {
-            log.error('Failed to fetch history for ROWID.');
+            log.error('Failed to fetch history');
             log.error(error.message);
         }
     }
@@ -68,7 +77,7 @@ Show the rowids and optionally SCNs for which we have anchored proofs
 `;
 
 HistoryCommand.flags = {
-    rowId: flags.string({
+    rowid: flags.string({
         string: 'r',
         description: 'row ID to fetch versions for',
         required: false,

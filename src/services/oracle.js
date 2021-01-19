@@ -49,7 +49,7 @@ const tableDefs = [];
 module.exports = {
     // Connect to Oracle
     connectToOracle: async (config, verbose = false) => {
-        log.info('Connecting to Oracle...');
+        log.trace('Connecting to Oracle...');
         if (verbose) {
             log.setLevel('trace');
         }
@@ -59,7 +59,7 @@ module.exports = {
                 user: config.oracleConnection.user,
                 password: config.oracleConnection.password,
             });
-            log.info('Connected to Oracle');
+            log.trace('Connected to Oracle');
             if (verbose) {
                 await module.exports.execSQL(oraConnection, 'begin dbms_session.session_trace_enable(waits=>TRUE);end;', false, verbose);
                 await module.exports.execSQL(oraConnection, 'ALTER SESSION SET tracefile_identifier=proofable', false, verbose);
@@ -319,7 +319,8 @@ module.exports = {
                 `GRANT ALTER SESSION to ${provendbUser} `,
                 `GRANT FLASHBACK ANY TABLE  TO ${provendbUser} `,
                 `GRANT execute_catalog_role TO ${provendbUser} `,
-                `GRANT execute ON dbms_Session to ${provendbUser} `];
+                `GRANT execute ON dbms_Session to ${provendbUser} `
+            ];
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(sysConnection, sqls[s], false, verbose);
             }
@@ -329,7 +330,8 @@ module.exports = {
                 const sqls = [`CREATE USER ${provendbDemoUser} IDENTIFIED BY ` + provendbPassword,
                     `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbDemoUser}`,
                     `GRANT execute_catalog_role TO ${provendbDemoUser}`,
-                    `GRANT execute ON dbms_alert TO ${provendbDemoUser}`, ];
+                    `GRANT execute ON dbms_alert TO ${provendbDemoUser}`,
+                ];
                 for (let s = 0; s < sqls.length; s++) {
                     await module.exports.execSQL(sysConnection, sqls[s], false, verbose);
                 }
@@ -655,26 +657,25 @@ module.exports = {
     // List known versions of a specific Rowid
     listEntries: async (rowid) => {
         try {
-            console.log();
-            console.log('   Rowid: ', rowid);
-            console.log('----------' + '-'.repeat(rowid.length + 1));
-
+            const format = '%-18s %-22s %-26s %-24s %-24s';
+            console.log('\n');
+            console.log(sprintf(format, 'Rowid', 'Proof', 'key', 'startDate', 'endDate'));
             const rowidPattern = `${rowid}.%`;
             const sqlText = `
-          SELECT rowid_scn,trieid,start_time,end_time 
-          FROM proofablecontrolrowids 
-          JOIN proofablecontrol USING(trieid)
-          WHERE rowid_scn LIKE :1 or rowid_scn=:2
-          ORDER BY start_time 
+                SELECT rowid_scn,trieid,start_time,end_time 
+                FROM proofablecontrolrowids 
+                JOIN proofablecontrol USING(trieid)
+                WHERE rowid_scn LIKE :1 or rowid_scn=:2
+                ORDER BY start_time 
   `;
             const result = await oraConnection.execute(sqlText, [rowidPattern, rowid]);
             if (result.rows.length === 0) {
-                log.info('No matching rowIds found');
+                log.error(`No proofs for ${rowid}`);
             } else {
-                const format = '%-22s %-26s %-24s %-24s';
-                console.log(sprintf(format, 'Proof', 'key', 'startDate', 'endDate'));
+  
+
                 result.rows.forEach((row) => {
-                    console.log(row[1], row[0], row[2], row[3]);
+                    console.log(sprintf(format, rowid, row[1], row[0], row[2].toISOString(), row[3].toISOString()));
                 });
             }
         } catch (error) {
@@ -816,7 +817,7 @@ module.exports = {
 
     // Process changes for a single table
     process1TableChanges: async (tableDef, adHoc, where, includeScn) => {
-        log.info('Processing ', ' ', tableDef.tableOwner, '.', tableDef.tableName, ' adhoc: ', adHoc, 'Where: ', where);
+        log.info('Processing ', ' ', tableDef.tableOwner, '.', tableDef.tableName, ' Where: ', where);
         if (where) {
             log.info('WHERE ', where);
         }
@@ -876,6 +877,8 @@ module.exports = {
             console.log('Table: ', tableName);
             const divider = '-------' + '-'.repeat(tableName.length + 1);
             console.log(divider);
+            const format = '%-18s %-22s %-26s %-24s %-24s';
+            console.log(sprintf(format, 'Rowid', 'Proof', 'key', 'startDate', 'endDate'));
             let row = await results.resultSet.getRow();
             while (row) {
                 const rowId = row[0];

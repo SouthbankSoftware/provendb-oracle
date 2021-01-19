@@ -20,6 +20,7 @@ rules:
   no-shadow: 0
   eqeqeq: 0
   array-callback-return: 0
+  prefer-destructuring: 0
   no-param-reassign: 0
   space-before-function-paren: 0
   global-require: 0
