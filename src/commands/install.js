@@ -15,7 +15,6 @@ const {
     saveConfig
 } = require('../services/config');
 
-// TODO: Allow installer to specify a Oracle account name 
 // TODO: Use Oracle JSON tables
 
 class InstallCommand extends Command {

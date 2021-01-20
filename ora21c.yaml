@@ -1,10 +1,10 @@
 oracleConnection:
-  connectString: testDb
-  user: provendbtest
-  password: DBEnvy2016
+  connectString: ora21c
+  user: provendb
+  password: T#x1138T#x1138
 oracleTables:
-  - PROVENDBTESTDEMO.CONTRACTSTABLE
-  - PROVENDBTESTDEMO.CONTRACTSTABLEFBDA
+  - PROVENDBDEMO.CONTRACTSTABLE
+  - PROVENDBDEMO.CONTRACTSTABLEFBDA
 anchorType: HEDERA
 dbmsAlert: 'TRUE'
 proofable:

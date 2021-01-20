@@ -25,10 +25,6 @@ const {
 // TODO: Out of memory errors
 // TODO: Support for blockchain table types
 
-// TODO: Should support a validate against a specific row proof (provide trie and rowid together)
-// TODO: Validate fails if the proof was anchored with --includeScn
-// TODO: If no output file selected, writes to 'undefined.provendb'
-
 class ValidateCommand extends Command {
     async run() {
         try {
@@ -42,16 +38,20 @@ class ValidateCommand extends Command {
                 proofId,
                 verbose
             } = flags;
-            let outputFile;
-            if (flags.output) {
-                outputFile = flags.output;
-            } else {
-                outputFile = `${rowid}.provendb`;
-            }
 
             if (!(rowid || proofId)) {
                 throw new Error('Must specify either a rowid or a proofId;  try --help');
             }
+
+            let outputFile;
+            if (flags.output) {
+                outputFile = flags.output;
+            } else if (flags.rowid) {
+                outputFile = `${rowid}.provendb`;
+            } else {
+                outputFile = `${proofId}.provendb`;
+            }
+
 
 
             // Load Config
@@ -71,14 +71,14 @@ class ValidateCommand extends Command {
             if (rowid) {
                 log.info(`Validating row: ${rowid}`);
                 await validateRow(rowid, outputFile, verbose);
+
                 log.info('Row proof written to ', outputFile);
             }
             if (proofId) {
                 log.info(`Validating proofId: ${proofId}`);
                 await validateProof(proofId, outputFile, verbose);
-                if (outputFile) {
-                    log.info('Proof written to ', outputFile);
-                }
+
+                log.info('Proof written to ', outputFile);
             }
         } catch (error) {
             log.error('Failed to validate row:');

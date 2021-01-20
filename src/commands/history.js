@@ -18,10 +18,6 @@ const {
     getConfig
 } = require('../services/config');
 
-
-
-// TODO: Allow history to take a table and where clause criteria
-
 class HistoryCommand extends Command {
     async run() {
         try {

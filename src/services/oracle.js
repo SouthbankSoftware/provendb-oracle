@@ -122,7 +122,7 @@ module.exports = {
         if (verbose) {
             log.setLevel('trace');
         }
-        log.trace(`Connecting to ${provendbUser} user `, connectString, ' ', provendbPassword)
+        log.trace(`Connecting to ${provendbUser} user `, connectString, ' ', provendbPassword);
         try {
             oraConnection = await oracledb.getConnection({
                 connectString,
@@ -158,7 +158,8 @@ module.exports = {
                                     trieid
                                 ASC )
                         )
-                    ENABLE)`);
+                    ENABLE)`
+            );
 
             sqls.push(
                 `CREATE INDEX proofablecontrol_i1 ON
@@ -166,22 +167,26 @@ module.exports = {
                               owner_name,
                               table_name,
                               start_time,
-                              end_time)`);
+                              end_time)`
+            );
             sqls.push(
                 `CREATE TABLE proofablecontrolrowids (
                             trieid            VARCHAR2(256) NOT NULL,
                             rowid_scn   VARCHAR2(128) NOT NULL,
                             versions_starttime timestamp not null,
                             CONSTRAINT proofablecontrolrowids_pk 
-                            PRIMARY KEY ( trieid,rowid_scn ) ENABLE)`);
+                            PRIMARY KEY ( trieid,rowid_scn ) ENABLE)`
+            );
             sqls.push(
                 `ALTER TABLE proofablecontrolrowids
                           ADD CONSTRAINT proofablecontrolrowids_fk1 FOREIGN KEY ( trieid )
                               REFERENCES proofablecontrol ( trieid )
-                          ENABLE`);
+                          ENABLE`
+            );
             sqls.push(
                 `CREATE INDEX proofablecontrolrowids_i1 
-                    ON proofablecontrolrowids(rowid_scn)`);
+                    ON proofablecontrolrowids(rowid_scn)`
+            );
 
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(oraConnection, sqls[s], false, verbose);
@@ -198,7 +203,7 @@ module.exports = {
             log.setLevel('trace');
         }
         const provendbDemoUser = provendbUser + 'demo';
-        log.trace('Connecting to provendbDemo user ', connectString, ' ', provendbPassword)
+        log.trace('Connecting to provendbDemo user ', connectString, ' ', provendbPassword);
         try {
             oraConnection = await oracledb.getConnection({
                 connectString,
@@ -222,7 +227,8 @@ module.exports = {
                         CHECK (metaData IS JSON),
                       contractData VARCHAR2(4000) NOT NULL,
                       mytimestamp TIMESTAMP
-                    )`);
+                    )`
+            );
 
             sqls.push(
                 ` CREATE TABLE contractsTableFBDA(
@@ -231,21 +237,25 @@ module.exports = {
                                 CHECK (metaData IS JSON),
                               contractData VARCHAR2(4000) NOT NULL,
                               mytimestamp TIMESTAMP
-                            )`);
+                            )`
+            );
             sqls.push(
                 `CREATE OR REPLACE TRIGGER contractsTable_proofable_trg 
                     AFTER INSERT OR UPDATE OR DELETE ON contractsTable
                     BEGIN 
                       DBMS_ALERT.SIGNAL('provendb_alert','proofable table modified'); 
-                    END; `);
+                    END; `
+            );
             sqls.push(
                 `CREATE OR REPLACE TRIGGER contractsTableFB_proofable_trg 
                     AFTER INSERT OR UPDATE OR DELETE ON contractstablefbda
                     BEGIN 
                         DBMS_ALERT.SIGNAL('provendb_alert','proofable table modified'); 
-                    END; `);
+                    END; `
+            );
             sqls.push(
-                'CREATE SEQUENCE contract_seq ');
+                'CREATE SEQUENCE contract_seq '
+            );
             sqls.push(
                 ` CREATE OR REPLACE PROCEDURE populatecontractsTable(n NUMBER) IS
                     counter INTEGER:=0;
@@ -256,12 +266,14 @@ module.exports = {
                       counter:=counter+1;
                     END LOOP;
                     COMMIT;
-                  END; `);
+                  END; `
+            );
             sqls.push(
                 `BEGIN
                     populatecontractsTable(100);
                     COMMIT;
-                 END;`);
+                 END;`
+            );
             sqls.push('INSERT INTO contractsTableFBDA SELECT * FROM contractsTable');
             sqls.push('commit');
             for (let s = 0; s < sqls.length; s++) {
@@ -335,7 +347,7 @@ module.exports = {
                 for (let s = 0; s < sqls.length; s++) {
                     await module.exports.execSQL(sysConnection, sqls[s], false, verbose);
                 }
-                const sqlText = `GRANT FLASHBACK ARCHIVE ADMINISTER TO ${provendbDemoUser}`
+                const sqlText = `GRANT FLASHBACK ARCHIVE ADMINISTER TO ${provendbDemoUser}`;
                 await module.exports.execSQL(sysConnection, sqlText, true, verbose);
             }
         } catch (error) {
@@ -672,8 +684,6 @@ module.exports = {
             if (result.rows.length === 0) {
                 log.error(`No proofs for ${rowid}`);
             } else {
-  
-
                 result.rows.forEach((row) => {
                     console.log(sprintf(format, rowid, row[1], row[0], row[2].toISOString(), row[3].toISOString()));
                 });
@@ -739,7 +749,7 @@ module.exports = {
         for (let tableNo = 0; tableNo < tableNames.length; tableNo++) {
             const tableDef = tableDefs[tableNames[tableNo]];
             log.trace('Processing ', tableDef);
-            const tableData = await module.exports.process1TableChanges(tableDef, false, null, true);
+            const tableData = await module.exports.process1TableChanges(tableDef, false, null, true, null);
             if (Object.keys(tableData.keyValues).length > 0) {
                 const anchoredTrie = await anchorData(tableData, config.anchorType);
                 await module.exports.saveTrieToDB(
@@ -816,15 +826,22 @@ module.exports = {
     },
 
     // Process changes for a single table
-    process1TableChanges: async (tableDef, adHoc, where, includeScn) => {
+    process1TableChanges: async (tableDef, adHoc, where, includeScn, scnValue) => {
         log.info('Processing ', ' ', tableDef.tableOwner, '.', tableDef.tableName, ' Where: ', where);
         if (where) {
             log.info('WHERE ', where);
         }
 
         const tableName = `${tableDef.tableOwner}.${tableDef.tableName}`;
-        const currentScn = await module.exports.getSCN();
-        log.trace('Current SCN ', currentScn);
+
+        // Use the current SCN unless one has been passed.
+        let effectiveScn;
+        if (scnValue) {
+            effectiveScn = scnValue;
+        } else {
+            effectiveScn = await module.exports.getSCN();
+        }
+        log.trace('Effective SCN ', effectiveScn);
         const lastProofableAnchor = await module.exports.getTableLastSCN(
             tableDef.tableOwner,
             tableDef.tableName,
@@ -833,18 +850,20 @@ module.exports = {
 
         let rawTableData;
         if (adHoc && !includeScn) {
+            // We always get SCN values unless an adhoc request has been made without
+            // SCNs
             rawTableData = await module.exports.getTableDataNoScn(tableName, where);
         } else {
             rawTableData = await module.exports.getTableDataScn(
                 tableName,
                 lastProofableAnchor,
-                currentScn,
+                effectiveScn,
                 adHoc,
                 where
             );
         }
         // log.trace(rawTableData);
-        const processedTableData = module.exports.processTableData(rawTableData, currentScn, includeScn);
+        const processedTableData = module.exports.processTableData(rawTableData, effectiveScn, includeScn);
         // log.trace(processedTableData);
 
         return {
@@ -854,17 +873,17 @@ module.exports = {
             minStartTime: processedTableData.minStartTime,
             maxStartScn: processedTableData.maxStartScn,
             minStartScn: processedTableData.minStartScn,
-            currentScn
+            currentScn: effectiveScn
         };
     },
 
     listTableEntries: async (tables, where) => {
         for (let ti = 0; ti < tables.length; ti++) {
-            const tableName = tables[ti]
+            const tableName = tables[ti];
 
-            let sqlText = `Select rowid from ${tableName}`
+            let sqlText = `Select rowid from ${tableName}`;
             if (where) {
-                sqlText += ` WHERE ${where}`
+                sqlText += ` WHERE ${where}`;
             }
             log.trace(sqlText);
             const results = await oraConnection.execute(
@@ -1078,11 +1097,13 @@ module.exports = {
                 rowData,
                 rowProof
             });
-            await fs.writeFileSync(jsonFile, jsonData);
-            const zipFile = new AdmZip();
-            zipFile.addLocalFolder(tmpDir);
-            await zipFile.writeZip(outputFile);
-            if ((!silent) || verbose) log.info(`Wrote proof for ${rowidKey} to ${outputFile}`);
+            if (outputFile) {
+                await fs.writeFileSync(jsonFile, jsonData);
+                const zipFile = new AdmZip();
+                zipFile.addLocalFolder(tmpDir);
+                await zipFile.writeZip(outputFile);
+                if ((!silent) || verbose) log.info(`Wrote proof for ${rowidKey} to ${outputFile}`);
+            }
             return rowProof;
         } catch (error) {
             log.error(error.message, ' while validating rowId ', rowidKey);
@@ -1117,7 +1138,7 @@ module.exports = {
             }
 
             await zipFile.writeZip(outputFile);
-            log.info(`Wrote proof file to ${outputFile}`)
+            log.info(`Wrote proof file to ${outputFile}`);
             // TODO: Add a README to the zip
         } catch (error) {
             log.error(error.message, ' while retrieving rowids for proof');
@@ -1170,7 +1191,8 @@ module.exports = {
             const {
                 tableDef,
                 trietype,
-                where
+                where,
+                metadata
             } = await module.exports.getProofDetails(proofId, verbose);
             if (tableDef.exists) {
                 // Get trie as well
@@ -1179,11 +1201,12 @@ module.exports = {
                 // Get data corresponding to trie
                 if (trietype === 'AdHoc') {
                     log.info('Loading table data');
-                    const tableData = await module.exports.process1TableChanges(tableDef, 'adhoc', where, false);
+                    const tableData = await module.exports.process1TableChanges(tableDef, 'adhoc', where, metadata.includeScn, metadata.currentScn);
                     log.info('Validating table data against proof');
                     const validatedProof = await validateData(trie, tableData.keyValues, outputFile, verbose);
                     console.log(validatedProof);
                 } else {
+                    // TODO: Can only validate adhoc proofs
                     log.error(`Cannot validate ${trietype} proof yet`);
                 }
             } else {
@@ -1207,7 +1230,8 @@ module.exports = {
                                 start_scn,
                                 end_scn,
                                 trietype,
-                                whereclause
+                                whereclause,
+                                metadata
                         FROM proofablecontrol where trieid=:1
                 `, [proofId]
         );
@@ -1220,12 +1244,14 @@ module.exports = {
         const tableName = row[1];
         const trietype = row[6];
         const where = row[7];
+        const metadata = JSON.parse(row[8]);
         const tableDef = await module.exports.check1table(userName, tableName);
         log.trace(tableDef);
         return {
             tableDef,
             trietype,
-            where
+            where,
+            metadata
         };
     }
 };

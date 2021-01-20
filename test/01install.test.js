@@ -5,9 +5,9 @@
 /* eslint unicorn/filename-case:off */
 
 const {
-    promisify
-} = require('util');
-const exec = promisify(require('child_process').exec);
+    provendbOracle
+} = require('./testCommon');
+
 const fs = require('fs');
 const yaml = require('js-yaml');
 
@@ -39,6 +39,7 @@ describe('provendb-oracle Anchor tests', () => {
         expect(output).toEqual(expect.stringMatching('INFO  Connected to SYS'));
         expect(output).toEqual(expect.stringMatching('INFO  Install complete'));
         expect(output).toEqual(expect.stringMatching('INFO  Wrote new config'));
+        expect(output).not.toEqual(expect.stringMatching('ERROR'));
         await sleep(1000);
         try {
             const config = yaml.load(fs.readFileSync('testConfig.yaml'));
@@ -58,17 +59,4 @@ function sleep(ms) {
     return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function provendbOracle(args) {
-    const input = 'provendb-oracle ' + args + ' 2>&1|cut -c -1000';
-    console.log(input);
-    let output;
-    let cmdout;
-    try {
-        cmdout = await exec(input);
-        output = cmdout.stdout;
-    } catch (error) {
-        console.log(error.stack);
-    }
-    if (debug) console.log(output);
-    return output;
-}
+ 
