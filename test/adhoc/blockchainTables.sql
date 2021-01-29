@@ -9,7 +9,7 @@ CREATE BLOCKCHAIN TABLE contractsBCTable
                      NO DELETE LOCKED
                      HASHING USING "SHA2_512" VERSION "v1";
 
- ALTER table contractsTableFBDA flashback archive provendb;
+ ALTER table contractsBCTable flashback archive provendbdemo;
 
 CREATE SEQUENCE contract_seq ;
 
@@ -40,7 +40,7 @@ set serveroutput on ;
 DECLARE
   verify_rows NUMBER;
 BEGIN
-        DBMS_BLOCKCHAIN_TABLE.VERIFY_ROWS('GUY','CONTRACTSBCTABLE', 
+        DBMS_BLOCKCHAIN_TABLE.VERIFY_ROWS('PROVENDBDEMO','CONTRACTSBCTABLE', 
         NULL, NULL, NULL, NULL, verify_rows);
         dbms_output.put_line(verify_rows||' rows verified');
 END;
