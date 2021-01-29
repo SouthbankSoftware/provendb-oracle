@@ -28,6 +28,7 @@ class MonitorCommand extends Command {
                 flags
             } = this.parse(MonitorCommand);
             const {
+                tables,
                 interval,
                 verbose
             } = flags;
@@ -39,15 +40,17 @@ class MonitorCommand extends Command {
                 log.setLevel('trace');
                 log.trace(config);
             }
-
+            if (!tables) {
+                throw new Error('Must specify --tables option');
+            }
             // Establish connection:
             await connectToOracle(config, verbose);
             await connectToProofable(config, verbose);
-            await checkTables(config.oracleTables);
+            await checkTables(tables);
             log.info(`Monitoring with ${interval}ms interval.`);
             // eslint-disable-next-line no-constant-condition
             while (true) {
-                await processTableChanges(config);
+                await processTableChanges(config,tables);
                 await monitorSleep(interval, config);
             }
         } catch (error) {
@@ -79,6 +82,12 @@ MonitorCommand.flags = {
         string: 'c',
         description: 'config file location',
         required: false
+    }),
+    tables: flags.string({
+        string: 't',
+        description: 'tables to anchor',
+        required: true,
+        multiple: true,
     }),
 };
 

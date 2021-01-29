@@ -1,1 +1,1 @@
-bin/run $*
+node bin/run.js  $*

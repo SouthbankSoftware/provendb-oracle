@@ -46,6 +46,7 @@ const {
 oracledb.autoCommit = false;
 let oraConnection = {};
 const tableDefs = [];
+// TODO: Need to get rid of the tableDefs global. 
 module.exports = {
     // Connect to Oracle
     connectToOracle: async (config, verbose = false) => {
