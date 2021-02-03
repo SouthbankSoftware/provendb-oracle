@@ -513,7 +513,7 @@ module.exports = {
 
     // Check a single table
     check1table: async (user, table) => {
-        log.info('Checking ', user, '.', table);
+        log.trace('Checking ', user, '.', table);
         const tableData = {};
         tableData.tableOwner = user;
         tableData.tableName = table;
@@ -769,7 +769,7 @@ module.exports = {
     // Save a trie to the Proofable control table
     saveTrieToDB: async (trieId, tableOwner, tableName, tableData, trieType, whereclause, includeScn) => {
         try {
-            log.info(`Saving trie ${trieId} to db`);
+            log.trace(`Saving proof ${trieId} to db`);
             const tmpFile = tmp.fileSync();
             const trieFileName = tmpFile.name;
 
@@ -828,10 +828,8 @@ module.exports = {
 
     // Process changes for a single table
     process1TableChanges: async (tableDef, adHoc, where, includeScn, scnValue) => {
-        log.info('Processing ', ' ', tableDef.tableOwner, '.', tableDef.tableName, ' Where: ', where);
-        if (where) {
-            log.info('WHERE ', where);
-        }
+        log.info('Processing ', ' ', tableDef.tableOwner, '.', tableDef.tableName);
+        log.info (' Where: ', where);
 
         const tableName = `${tableDef.tableOwner}.${tableDef.tableName}`;
 
@@ -1188,7 +1186,7 @@ module.exports = {
             log.setLevel('trace');
         }
         try {
-            log.info('Retrieving proof details for ', proofId);
+            log.trace('Retrieving proof details for ', proofId);
             const {
                 tableDef,
                 trietype,

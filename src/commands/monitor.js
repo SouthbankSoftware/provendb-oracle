@@ -61,7 +61,7 @@ class MonitorCommand extends Command {
 }
 
 MonitorCommand.description = `Monitor the database for changes.
-...
+ 
 Monitor checks tables listed in the configuration file for changes.   
 Any changes to rows found will be anchored to the blockchain defined
 in the configuration file. 
@@ -78,17 +78,17 @@ MonitorCommand.flags = {
         description: 'increased logging verbosity',
         default: false
     }),
-    config: flags.string({
-        string: 'c',
-        description: 'config file location',
-        required: false
-    }),
     tables: flags.string({
         string: 't',
         description: 'tables to anchor',
         required: true,
         multiple: true,
     }),
+    config: flags.string({
+        string: 'c',
+        description: 'config file location',
+        required: false
+    })
 };
 
 module.exports = MonitorCommand;

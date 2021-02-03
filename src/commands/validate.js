@@ -34,20 +34,20 @@ class ValidateCommand extends Command {
             } = this.parse(ValidateCommand);
 
             const {
-                rowid,
+                rowId,
                 proofId,
                 verbose
             } = flags;
 
-            if (!(rowid || proofId)) {
+            if (!(rowId || proofId)) {
                 throw new Error('Must specify either a rowid or a proofId;  try --help');
             }
 
             let outputFile;
             if (flags.output) {
                 outputFile = flags.output;
-            } else if (flags.rowid) {
-                outputFile = `${rowid}.provendb`;
+            } else if (flags.rowId) {
+                outputFile = `${rowId}.provendb`;
             } else {
                 outputFile = `${proofId}.provendb`;
             }
@@ -68,9 +68,9 @@ class ValidateCommand extends Command {
 
             // Command Specific Logic:
 
-            if (rowid) {
-                log.info(`Validating row: ${rowid}`);
-                await validateRow(rowid, outputFile, verbose);
+            if (rowId) {
+                log.info(`Validating row: ${rowId}`);
+                await validateRow(rowId, outputFile, verbose);
 
                 log.info('Row proof written to ', outputFile);
             }
@@ -89,7 +89,7 @@ class ValidateCommand extends Command {
 
 ValidateCommand.description = `Validate Oracle data against a blockchain proof
 
-Validate compares the data in the database (or in the flashback archive) to the 
+sValidate compares the data in the database (or in the flashback archive) to the 
 digital signature (hash value) that was created when the row was anchored.  It then
 confirms that the hashes match and that the hash is included in the blockchain anchor.
 
@@ -99,7 +99,7 @@ proof file can serve as an independent proof of the data.
 // TODO: Schema should use ProofId, not TrieId.
 
 ValidateCommand.flags = {
-    rowid: flags.string({
+    rowId: flags.string({
         string: 'r',
         description: 'row ID to validate',
         required: false,

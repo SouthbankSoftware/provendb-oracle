@@ -46,14 +46,14 @@ module.exports = {
             keyvalues));
         const validatedProof = await proofableClient.verifyTrieWithSortedKeyValues(trie,
             newSortedData);
-        if (validatedProof.total !== validatedProof.passed) {
+        if (validatedProof.keyValues.total !== validatedProof.keyValues.passed) {
             log.error('Proof not validated!');
         } else {
             log.info('All keys validated');
         }
         if (outputFile) {
             fs.writeFileSync(outputFile, JSON.stringify(validatedProof));
-            log.info('Proof written to ', outputFile);
+            log.trace('Proof written to ', outputFile);
         }
         return (validatedProof);
     },
@@ -91,7 +91,7 @@ module.exports = {
         /* To get a token:
           YOUR_TOKEN = "$(jq -r '.authToken' ~/Library/Application\ Support/ProvenDB/auth.json)"
           */
-        log.info('Connecting to Proofable');
+        log.trace('Connecting to ProvenDB');
 
         if (!('proofable' in config)) {
             proofableClient = proofable.newAPIClient('api.dev.proofable.io:443');

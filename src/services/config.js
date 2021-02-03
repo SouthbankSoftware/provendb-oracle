@@ -81,7 +81,6 @@ module.exports = {
                 user: provendbUser,
                 password: provendbPassword
             },
-            oracleTables: ['username.tablename'],
             anchorType: 'HEDERA_MAINNET',
             dbmsAlert: 'TRUE',
             proofable: {
