@@ -61,7 +61,7 @@ class MonitorCommand extends Command {
 }
 
 MonitorCommand.description = `Monitor the database for changes.
- 
+
 Monitor checks tables listed in the configuration file for changes.   
 Any changes to rows found will be anchored to the blockchain defined
 in the configuration file. 

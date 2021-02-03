@@ -19,7 +19,7 @@ $ npm install -g provendb-oracle
 $ provendb-oracle COMMAND
 running command...
 $ provendb-oracle (-v|--version|version)
-provendb-oracle/0.0.0 linux-x64 node-v12.20.1
+provendb-oracle/0.0.0 darwin-x64 node-v12.20.1
 $ provendb-oracle --help [COMMAND]
 USAGE
   $ provendb-oracle COMMAND
@@ -111,7 +111,7 @@ USAGE
 OPTIONS
   -v, --verbose    increased logging verbosity
   --config=config  config file location
-  --rowId=rowId    row ID to fetch versions for
+  --rowid=rowid    row ID to fetch versions for
   --tables=tables  tablenames to search (username.tablename)
   --where=where    WHERE clause to filter rows
 
@@ -155,9 +155,9 @@ OPTIONS
   -i, --interval=interval  [default: 120] polling interval
   -v, --verbose            increased logging verbosity
   --config=config          config file location
+  --tables=tables          (required) tables to anchor
 
 DESCRIPTION
-  ...
   Monitor checks tables listed in the configuration file for changes.   
   Any changes to rows found will be anchored to the blockchain defined
   in the configuration file.
@@ -167,7 +167,7 @@ _See code: [src/commands/monitor.js](https://github.com/michaeljharrison/proofab
 
 ## `provendb-oracle validate`
 
-Validate a rowId against the most recent proof.
+Validate Oracle data against a blockchain proof
 
 ```
 USAGE
@@ -181,7 +181,7 @@ OPTIONS
   --rowId=rowId      row ID to validate
 
 DESCRIPTION
-  Validate compares the data in the database (or in the flashback archive) to the 
+  sValidate compares the data in the database (or in the flashback archive) to the 
   digital signature (hash value) that was created when the row was anchored.  It then
   confirms that the hashes match and that the hash is included in the blockchain anchor.
 

@@ -1,0 +1,9 @@
+oracleConnection:
+  connectString: 'mubuntu.local:1521/orcl'
+  user: myProvenDB
+  password: a_12Burewoww6
+anchorType: HEDERA
+dbmsAlert: 'TRUE'
+proofable:
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MTIyMzQ1NzQsImp0aSI6InBGUFlkVXZlUzdSdWhYajJENXVpcXN0VzBVU0RmZEprTlZQWWlJdEMzNVU9Iiwic3ViIjoidXZweDNiNWM1dXZtd245NHFhN3Y0bmRyIn0.d2R4T3vr3F2ozxWJIQwBl6NtdZ6AEf7ypjSZPBWkYmg
+  endpoint: 'api.proofable.io:443'
