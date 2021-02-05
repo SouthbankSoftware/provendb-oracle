@@ -22,4 +22,5 @@ run:
       export APP_VERSION=$(cat version/number)
       git config --global url."https://${GIT_ACCESS_TOKEN}:@github.com/".insteadOf "https://github.com/"
       cd provendb-oracle
-      npm build
+      yarn install
+      yarn build
