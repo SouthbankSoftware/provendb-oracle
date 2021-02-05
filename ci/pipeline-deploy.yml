@@ -65,24 +65,24 @@ resources:
       json_key: ((common.service-account))
       key: provendb-oracle/version/version.txt
       initial_version: 0.0.0
-  - name: release-darwin_amd64
+  - name: release-mac
     type: gcs-resource
     source:
       bucket: provendb-dev
       json_key: ((common.service-account))
-      versioned_file: provendb-oracle/provendb-oracle_darwin_amd64
-  - name: release-linux_amd64
+      versioned_file: provendb-oracle/provendb-oracle-mac.zip
+  - name: release-linux
     type: gcs-resource
     source:
       bucket: provendb-dev
       json_key: ((common.service-account))
-      versioned_file: provendb-oracle/provendb-oracle_linux_amd64
-  - name: release-windows_amd64
+      versioned_file: provendb-oracle/provendb-oracle-linux.zip
+  - name: release-windows
     type: gcs-resource
     source:
       bucket: provendb-dev
       json_key: ((common.service-account))
-      versioned_file: provendb-oracle/provendb-oracle_windows_amd64.exe
+      versioned_file: provendb-oracle/provendb-oracle-windows.zip
   - name: docker-registry
     type: docker-image
     source:
@@ -107,19 +107,19 @@ jobs:
           fail_fast: true
           limit: 3
           steps:
-            - put: release-darwin_amd64
+            - put: release-mac
               params:
-                file: provendb-oracle/provendb-oracle_darwin_amd64
+                file: provendb-oracle/provendb-oracle-mac.zip
                 predefined_acl: publicRead
                 cache_control: no-cache, max-age=0
-            - put: release-linux_amd64
+            - put: release-linux
               params:
-                file: provendb-oracle/provendb-oracle_linux_amd64
+                file: provendb-oracle/provendb-oracle-linux.zip
                 predefined_acl: publicRead
                 cache_control: no-cache, max-age=0
-            - put: release-windows_amd64
+            - put: release-windows
               params:
-                file: provendb-oracle/provendb-oracle_windows_amd64.exe
+                file: provendb-oracle/provendb-oracle-windows.zip
                 predefined_acl: publicRead
                 cache_control: no-cache, max-age=0
       - put: docker-registry
@@ -155,7 +155,7 @@ jobs:
         - put: slack
           params:
             alert_type: failed
-            text: Aborted. ((slack.guan))
+            text: Aborted. ((slack.michael))
         - put: github-status
           params:
             commit: provendb-oracle

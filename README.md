@@ -1,5 +1,4 @@
-proofable-oracle
-================
+# proofable-oracle
 
 Proofable Connector for Oracle
 
@@ -9,11 +8,15 @@ Proofable Connector for Oracle
 [![License](https://img.shields.io/npm/l/proofable-oracle.svg)](https://github.com/michaeljharrison/proofable-oracle/blob/master/package.json)
 
 <!-- toc -->
-* [Usage](#usage)
-* [Commands](#commands)
+
+- [Usage](#usage)
+- [Commands](#commands)
 <!-- tocstop -->
+
 # Usage
+
 <!-- usage -->
+
 ```sh-session
 $ npm install -g provendb-oracle
 $ provendb-oracle COMMAND
@@ -25,16 +28,25 @@ USAGE
   $ provendb-oracle COMMAND
 ...
 ```
+
 <!-- usagestop -->
+
 # Commands
+
 <!-- commands -->
-* [`provendb-oracle anchor`](#provendb-oracle-anchor)
-* [`provendb-oracle autocomplete [SHELL]`](#provendb-oracle-autocomplete-shell)
-* [`provendb-oracle help [COMMAND]`](#provendb-oracle-help-command)
-* [`provendb-oracle history`](#provendb-oracle-history)
-* [`provendb-oracle install`](#provendb-oracle-install)
-* [`provendb-oracle monitor`](#provendb-oracle-monitor)
-* [`provendb-oracle validate`](#provendb-oracle-validate)
+
+- [proofable-oracle](#proofable-oracle)
+- [Usage](#usage)
+- [Commands](#commands)
+  - [`provendb-oracle anchor`](#provendb-oracle-anchor)
+  - [`provendb-oracle autocomplete [SHELL]`](#provendb-oracle-autocomplete-shell)
+  - [`provendb-oracle help [COMMAND]`](#provendb-oracle-help-command)
+  - [`provendb-oracle history`](#provendb-oracle-history)
+  - [`provendb-oracle install`](#provendb-oracle-install)
+  - [`provendb-oracle monitor`](#provendb-oracle-monitor)
+  - [`provendb-oracle validate`](#provendb-oracle-validate)
+- [Build Instructions](#build-instructions)
+  - [Mac (OCLIF)](#mac-oclif)
 
 ## `provendb-oracle anchor`
 
@@ -54,7 +66,7 @@ OPTIONS
   --where=where        WHERE clause to filter rows
 
 DESCRIPTION
-  Anchor reads the current state of selected table, filtered by an options WHERE 
+  Anchor reads the current state of selected table, filtered by an options WHERE
   clause.  Rows are hashed and anchored to the blockchain.
 ```
 
@@ -158,7 +170,7 @@ OPTIONS
   --tables=tables          (required) tables to anchor
 
 DESCRIPTION
-  Monitor checks tables listed in the configuration file for changes.   
+  Monitor checks tables listed in the configuration file for changes.
   Any changes to rows found will be anchored to the blockchain defined
   in the configuration file.
 ```
@@ -181,13 +193,24 @@ OPTIONS
   --rowId=rowId      row ID to validate
 
 DESCRIPTION
-  sValidate compares the data in the database (or in the flashback archive) to the 
+  sValidate compares the data in the database (or in the flashback archive) to the
   digital signature (hash value) that was created when the row was anchored.  It then
   confirms that the hashes match and that the hash is included in the blockchain anchor.
 
-  Validate generates a proof file which contains the row data and anchor information.  This 
+  Validate generates a proof file which contains the row data and anchor information.  This
   proof file can serve as an independent proof of the data.
 ```
 
 _See code: [src/commands/validate.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.0.0/src/commands/validate.js)_
+
 <!-- commandsstop -->
+
+<!-- build -->
+
+# Build Instructions
+
+## Mac (OCLIF)
+
+`yarn build:mac`
+
+<!-- buildstop -->
