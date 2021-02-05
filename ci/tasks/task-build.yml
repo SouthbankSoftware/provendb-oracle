@@ -24,11 +24,6 @@ run:
       cd provendb-oracle
       echo "Yarn Install..."
       yarn install
-      echo "Building mac..."
-      yarn build:mac
-      chmod 755 ./dist/macos/provendb-oracle-mac
-      zip provendb-oracle-mac.zip ./dist/macos/provendb-oracle-mac
-      mv ./dist/macos/provendb-oracle* ./dist/macos/provendb-oracle-mac
       echo "Building linux..."
       cp node_modules/oracledb/build/Release/oracledb-5.1.0-linux-x64.node dist
       pkg   -t node12-linux -o dist/provendb-oracle-linux . 
