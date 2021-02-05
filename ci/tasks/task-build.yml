@@ -22,5 +22,17 @@ run:
       export APP_VERSION=$(cat version/number)
       git config --global url."https://${GIT_ACCESS_TOKEN}:@github.com/".insteadOf "https://github.com/"
       cd provendb-oracle
+      echo "Yarn Install..."
       yarn install
-      yarn build
+      echo "Building mac..."
+      yarn build:mac
+      chmod 755 ./dist/macos/provendb-oracle-mac
+      zip provendb-oracle-mac.zip ./dist/macos/provendb-oracle-mac
+      mv ./dist/macos/provendb-oracle* ./dist/macos/provendb-oracle-mac
+      echo "Building linux..."
+      cp node_modules/oracledb/build/Release/oracledb-5.1.0-linux-x64.node dist
+      pkg   -t node12-linux -o dist/provendb-oracle-linux . 
+      cd dist
+      mv provendb-oracle-linux provendb-oracle
+      chmod 755 provendb-oracle
+      zip provendb-oracle-linux.zip provendb-oracle oracledb-5.1.0-linux-x64.node
