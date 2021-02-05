@@ -30,13 +30,13 @@ run:
       \"generation\": \"$(cat release-mac/generation)\", \
       \"uri\": \"$(cat release-mac/url)\"\
       }, \
-      \"linux_amd64\": {\
-      \"generation\": \"$(cat release-linux_amd64/generation)\", \
-      \"uri\": \"$(cat release-linux_amd64/url)\"\
+      \"linux\": {\
+      \"generation\": \"$(cat release-linux/generation)\", \
+      \"uri\": \"$(cat release-linux/url)\"\
       }, \
-      \"windows_amd64\": {\
-      \"generation\": \"$(cat release-windows_amd64/generation)\", \
-      \"uri\": \"$(cat release-windows_amd64/url)\"\
+      \"windows\": {\
+      \"generation\": \"$(cat release-windows/generation)\", \
+      \"uri\": \"$(cat release-windows/url)\"\
       }\
       }" >> provendb-releases/provendb-oracle-releases.jsonl
 
