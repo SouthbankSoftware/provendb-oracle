@@ -1,3 +1,5 @@
+./node_modules/@oclif/dev-cli/bin/run readme
+
 rm dist/provendb-oracle-linux.tar.gz 
 cp node_modules/oracledb/build/Release/oracledb-5.1.0-linux-x64.node dist
 pkg   -t node12-linux -o dist/provendb-oracle-linux . 
@@ -15,4 +17,4 @@ mv provendb-oracle-darwin provendb-oracle
 chmod 755 provendb-oracle
 tar zcvf provendb-oracle-mac.tar.gz provendb-oracle oracledb-5.1.0-darwin-x64.node
 
-rm provendb-oracle
+rm provendb-oracle *.node

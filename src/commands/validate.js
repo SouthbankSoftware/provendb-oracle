@@ -89,7 +89,7 @@ class ValidateCommand extends Command {
 
 ValidateCommand.description = `Validate Oracle data against a blockchain proof
 
-sValidate compares the data in the database (or in the flashback archive) to the 
+Validate compares the data in the database (or in the flashback archive) to the 
 digital signature (hash value) that was created when the row was anchored.  It then
 confirms that the hashes match and that the hash is included in the blockchain anchor.
 

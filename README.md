@@ -22,7 +22,7 @@ $ npm install -g provendb-oracle
 $ provendb-oracle COMMAND
 running command...
 $ provendb-oracle (-v|--version|version)
-provendb-oracle/0.0.0 darwin-x64 node-v12.13.0
+provendb-oracle/0.0.0 darwin-x64 node-v15.6.0
 $ provendb-oracle --help [COMMAND]
 USAGE
   $ provendb-oracle COMMAND
@@ -186,7 +186,7 @@ OPTIONS
   --rowId=rowId      row ID to validate
 
 DESCRIPTION
-  sValidate compares the data in the database (or in the flashback archive) to the 
+  Validate compares the data in the database (or in the flashback archive) to the 
   digital signature (hash value) that was created when the row was anchored.  It then
   confirms that the hashes match and that the hash is included in the blockchain anchor.
 
