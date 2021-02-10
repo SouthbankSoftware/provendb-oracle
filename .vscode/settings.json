@@ -1,0 +1,23 @@
+{
+  "sqltools.connections": [
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 5432,
+      "askForPassword": true,
+      "driver": "PostgreSQL",
+      "name": "Cloud",
+      "connectString": "postgres://guy:ObUzt1ZayHayiASS@free-tier.gcp-us-central1.cockroachlabs.cloud:26257?sslmode=verify-full&sslrootcert=/Users/guyharrison/keys/cc-ca.crt&options=--cluster=guyharrison1-506"
+    },
+    {
+      "previewLimit": 50,
+      "server": "localhost",
+      "port": 26257,
+      "driver": "PostgreSQL",
+      "name": "localtcp",
+      "database": "tpcc",
+      "username": "root",
+      "password": ""
+    }
+  ]
+}

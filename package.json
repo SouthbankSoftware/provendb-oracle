@@ -19,6 +19,7 @@
         "makensis": "^0.21.3",
         "oracledb": "^5.0.0",
         "password-prompt": "^1.1.2",
+        "pkg": "^4.4.9",
         "proofable": "^0.2.16",
         "simple-node-logger": "^18.12.24",
         "sprintf-js": "^1.1.2",
