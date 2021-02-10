@@ -126,3 +126,5 @@ tmp/
 v8-compile-cache-0/
 
 conf/
+
+provendb.yaml
