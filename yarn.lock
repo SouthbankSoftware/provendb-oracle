@@ -6869,7 +6869,7 @@
   "resolved" "https://registry.npmjs.org/node-modules-regexp/-/node-modules-regexp-1.0.0.tgz"
   "version" "1.0.0"
 
-"node-notifier@^8.0.0", "node-notifier@8.0.1":
+"node-notifier@^8.0.0":
   "integrity" "sha512-BvEXF+UmsnAfYfoapKM9nGxnP+Wn7P91YfXmrKnfcYCx6VBeoN5Ez5Ogck6I8Bi5k4RlpqRYaw75pAwzX9OphA=="
   "resolved" "https://registry.npmjs.org/node-notifier/-/node-notifier-8.0.1.tgz"
   "version" "8.0.1"
