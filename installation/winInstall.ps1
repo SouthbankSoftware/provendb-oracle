@@ -1,1 +1,1 @@
-& ([ScriptBlock]::Create((New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/SouthbankSoftware/proofable/master/cmd/proofable-cli/install.ps1')))
+& ([ScriptBlock]::Create((New-Object Net.WebClient).DownloadString('https://raw.githubusercontent.com/SouthbankSoftware/provendb-oracle/main/installation/install.ps1')))
