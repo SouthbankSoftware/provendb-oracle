@@ -5,8 +5,11 @@
 /* eslint unicorn/filename-case:off */
 
 const {
-    provendbOracle
+    provendbOracle, getParameters
 } = require('./testCommon');
+
+const parameters = getParameters();
+const demoSchema = parameters.config.oracleConnection.user.toUpperCase() + 'DEMO';
 
 describe('provendb-oracle History tests', () => {
     beforeAll(() => {});
@@ -27,9 +30,9 @@ describe('provendb-oracle History tests', () => {
     });
     test('table history', async () => {
         jest.setTimeout(120000);
-        const output = await provendbOracle('history --config=testConfig.yaml --tables=PROVENDBTESTDEMO.CONTRACTSTABLE');
+        const output = await provendbOracle(`history --config=testConfig.yaml --tables=${demoSchema}.CONTRACTSTABLE`);
 
-        expect(output).toEqual(expect.stringMatching('Table:  PROVENDBTESTDEMO.CONTRACTSTABLE'));
+        expect(output).toEqual(expect.stringMatching(`Table:  ${demoSchema}.CONTRACTSTABLE`));
         expect(output).toEqual(expect.stringMatching('Rowid'));
         const lines = output.toString().split(/(?:\r\n|\r|\n)/g);
         console.log(lines.length);
@@ -38,9 +41,9 @@ describe('provendb-oracle History tests', () => {
 
     test('Rowid history', async () => {
         jest.setTimeout(120000);
-        let output = await provendbOracle('history --config=testConfig.yaml --tables=PROVENDBTESTDEMO.CONTRACTSTABLE');
+        let output = await provendbOracle(`history --config=testConfig.yaml --tables=${demoSchema}.CONTRACTSTABLE`);
 
-        expect(output).toEqual(expect.stringMatching('Table:  PROVENDBTESTDEMO.CONTRACTSTABLE'));
+        expect(output).toEqual(expect.stringMatching(`Table:  ${demoSchema}.CONTRACTSTABLE`));
         expect(output).toEqual(expect.stringMatching('Rowid'));
         const lines = output.toString().split(/(?:\r\n|\r|\n)/g);
 

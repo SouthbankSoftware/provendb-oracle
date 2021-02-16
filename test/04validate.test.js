@@ -2,15 +2,16 @@
  *  Unit Test for provendb-oracle
  * @Author: Guy Harrison
  * */
-/* eslint unicorn/filename-case:off */
 
-
-// match(/^(\S*)(\s*)(\S*)(\s*)([A-Za-z0-9+/]*\.[0-9]*)(.*)/)
 
 const oracledb = require('oracledb');
 const {
-    provendbOracle
+    provendbOracle, getParameters
 } = require('./testCommon');
+
+const parameters = getParameters();
+const demoSchema = parameters.config.oracleConnection.user.toUpperCase() + 'DEMO';
+
 
 
 describe('provendb-oracle Anchor tests', () => {
@@ -28,14 +29,14 @@ describe('provendb-oracle Anchor tests', () => {
 
     test('Test help', async () => {
         const output = await provendbOracle('validate --help');
-        expect(output).toEqual(expect.stringMatching('Validate a rowId against the most recent proof'));
+        expect(output).toEqual(expect.stringMatching('Validate Oracle data against a blockchain proof'));
     });
 
     test('Validate a rowid SCN', async () => {
         jest.setTimeout(120000);
-        const output = await provendbOracle('history --config=testConfig.yaml --tables=PROVENDBTESTDEMO.CONTRACTSTABLEFBDA');
+        const output = await provendbOracle(`history --config=testConfig.yaml --tables=${demoSchema}.CONTRACTSTABLEFBDA`);
 
-        expect(output).toEqual(expect.stringMatching('Table:  PROVENDBTESTDEMO.CONTRACTSTABLEFBDA'));
+        expect(output).toEqual(expect.stringMatching(`Table:  ${demoSchema}.CONTRACTSTABLEFBDA`));
         expect(output).toEqual(expect.stringMatching('Rowid'));
         const lines = output.toString().split(/(?:\r\n|\r|\n)/g);
         let rowidScn;
@@ -47,7 +48,7 @@ describe('provendb-oracle Anchor tests', () => {
                 break;
             }
         }
-        const vOutput = await provendbOracle(`validate --config=testConfig.yaml --rowid=${rowidScn}`);
+        const vOutput = await provendbOracle(`validate --config=testConfig.yaml --rowId=${rowidScn}`);
         expect(vOutput).toEqual(expect.stringMatching('Rowid validation passed'));
         expect(vOutput).not.toEqual(expect.stringMatching('ERROR'));
     });
@@ -55,9 +56,9 @@ describe('provendb-oracle Anchor tests', () => {
 
     test('Validate an entire Proof', async () => {
         jest.setTimeout(120000);
-        const output = await provendbOracle('history --config=testConfig.yaml --tables=PROVENDBTESTDEMO.CONTRACTSTABLEFBDA');
+        const output = await provendbOracle(`history --config=testConfig.yaml --tables=${demoSchema}.CONTRACTSTABLEFBDA`);
 
-        expect(output).toEqual(expect.stringMatching('Table:  PROVENDBTESTDEMO.CONTRACTSTABLEFBDA'));
+        expect(output).toEqual(expect.stringMatching(`Table:  ${demoSchema}.CONTRACTSTABLEFBDA`));
         expect(output).toEqual(expect.stringMatching('Rowid'));
         const lines = output.toString().split(/(?:\r\n|\r|\n)/g);
         let proofId;

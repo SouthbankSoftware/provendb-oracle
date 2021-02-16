@@ -8,7 +8,9 @@ const passwordPrompt = require('password-prompt');
 
 const {
     connectToOracleSYS,
-    installPDB4O
+    installPDB4O,
+    connectToOracle,
+    connectToOracleDirect
 } = require('../services/oracle');
 
 const {
@@ -30,24 +32,44 @@ class InstallCommand extends Command {
                 provendbUser,
                 provendbPassword,
                 dropExisting,
-                createDemoAccount
+                createDemoAccount,
+                dbaUserName,
+                dbaPassword,
+                sysPassword
             } = flags;
 
             if (verbose) {
                 log.setLevel('trace');
             }
             log.trace(flags);
+            let loginMethod = 'SYS';
 
-            let sysPassword;
-            if (!flags.sysPassword) {
+            let effectiveDbaPassword = dbaPassword;
+
+            if (!flags.sysPassword && !flags.dbaUserName && !flags.dbaPassword) {
                 sysPassword = await passwordPrompt('Enter SYS password: ', {
                     method: 'mask'
                 });
-            } else {
-                sysPassword = flags.sysPassword;
+            } else if (flags.dbaUserName) {
+                loginMethod = 'DBA';
+                if (!flags.dbaPassword) {
+                    effectiveDbaPassword = await passwordPrompt(`Enter ${dbUserName} password: `, {
+                        method: 'mask'
+                    });
+                } else {
+                    effectiveDbaPassword = dbaPassword;
+                }
             }
-            const sysConnection = await connectToOracleSYS(oracleConnect, sysPassword, verbose);
-            await installPDB4O(oracleConnect, sysConnection, provendbUser,provendbPassword, dropExisting, createDemoAccount, verbose);
+
+            let dbaConnection;
+            if (loginMethod === 'SYS') {
+                log.trace('Connecting to sys');
+                dbaConnection = await connectToOracleSYS(oracleConnect, sysPassword, verbose);
+            } else {
+                log.trace('Connecting to DBA');
+                dbaConnection = await connectToOracleDirect(oracleConnect, dbaUserName, effectiveDbaPassword, verbose);
+            }
+            await installPDB4O(oracleConnect, dbaConnection, provendbUser, provendbPassword, dropExisting, createDemoAccount, verbose);
             if (flags.config) {
                 await saveConfig(flags.config, provendbUser, oracleConnect, provendbPassword);
             }
@@ -77,7 +99,15 @@ InstallCommand.flags = {
         required: true
     }),
     sysPassword: flags.string({
-        description: 'SYS Password',
+        description: 'SYS Password (instead of DBA username/password)',
+        required: false
+    }),
+    dbaPassword: flags.string({
+        description: 'DBA Password',
+        required: false
+    }),
+    dbaUserName: flags.string({
+        description: 'DBA Username',
         required: false
     }),
     provendbUser: flags.string({

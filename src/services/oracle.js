@@ -46,19 +46,18 @@ const {
 oracledb.autoCommit = false;
 let oraConnection = {};
 const tableDefs = [];
-// TODO: Need to get rid of the tableDefs global. 
+// TODO: Need to get rid of the tableDefs global.
 module.exports = {
-    // Connect to Oracle
-    connectToOracle: async (config, verbose = false) => {
-        log.trace('Connecting to Oracle...');
+    connectToOracleDirect: async (connectString, user, password, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
         try {
+            log.trace(`Connecting to ${connectString} ${user} ${password}`);
             oraConnection = await oracledb.getConnection({
-                connectString: config.oracleConnection.connectString,
-                user: config.oracleConnection.user,
-                password: config.oracleConnection.password,
+                connectString,
+                user,
+                password,
             });
             log.trace('Connected to Oracle');
             if (verbose) {
@@ -79,11 +78,30 @@ module.exports = {
             throw (error);
         }
     },
+    // Connect to Oracle from config file
+    connectToOracle: async (config, verbose = false) => {
+        log.trace('Connecting to Oracle...');
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        try {
+            oraConnection = await module.exports.connectToOracleDirect(
+                config.oracleConnection.connectString,
+                config.oracleConnection.user,
+                config.oracleConnection.password,
+            );
+            return oraConnection;
+        } catch (error) {
+            log.error(error.message, ' while connecting to oracle');
+            throw (error);
+        }
+    },
 
     connectToOracleSYS: async (connectString, password, verbose = false) => {
         log.info('Connecting to Oracle as SYS...');
         if (verbose) {
             log.setLevel('trace');
+            log.trace(`SYS password ${password}`);
         }
         try {
             oraConnection = await oracledb.getConnection({
@@ -111,7 +129,9 @@ module.exports = {
             await module.exports.createUsers(sysConnection, provendbUser, provendbPassword, dropExisting,
                 createDemoAccount, verbose);
             await module.exports.createProvendbTables(connectString, provendbUser, provendbPassword, verbose);
-            await module.exports.createDemoTables(connectString, provendbUser, provendbPassword, verbose);
+            if (createDemoAccount) {
+                await module.exports.createDemoTables(connectString, provendbUser, provendbPassword, verbose);
+            }
             log.info('Install complete');
         } catch (error) {
             log.error('Install failed ', error.message);
@@ -303,8 +323,8 @@ module.exports = {
             if (ignoreErrors === false) {
                 log.error(error.message, ' while executing ', sqlText);
                 throw (error);
-            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum)) ||
-                ignoreErrors === error.errorNum || ignoreErrors === true) {
+            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum))
+                || ignoreErrors === error.errorNum || ignoreErrors === true) {
                 log.info(error.message, ' handled while executing ', sqlText);
             } else {
                 log.error(error.message, ' while executing ', sqlText);
@@ -326,30 +346,41 @@ module.exports = {
                 }
             }
             log.info(`Creating ${provendbUser}  user`);
-            const sqls = [`CREATE USER ${provendbUser}  IDENTIFIED BY ` + provendbPassword,
-                `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbUser} `,
-                `GRANT SELECT ANY TABLE TO ${provendbUser} `,
-                `GRANT ALTER SESSION to ${provendbUser} `,
-                `GRANT FLASHBACK ANY TABLE  TO ${provendbUser} `,
-                `GRANT execute_catalog_role TO ${provendbUser} `,
-                `GRANT execute ON dbms_Session to ${provendbUser} `
+            // SQLs that cannot fail
+            let sqls = [`CREATE USER ${provendbUser}  IDENTIFIED BY ` + provendbPassword,
+            `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbUser} `,
             ];
+
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(sysConnection, sqls[s], false, verbose);
             }
-
+            // SQLs that might fail
+            sqls = [`GRANT SELECT ANY TABLE TO ${provendbUser} `,
+            `GRANT ALTER SESSION to ${provendbUser} `,
+            `GRANT FLASHBACK ANY TABLE  TO ${provendbUser} `,
+            `GRANT execute_catalog_role TO ${provendbUser} `,
+            `GRANT execute ON dbms_Session to ${provendbUser} `
+            ];
+            for (let s = 0; s < sqls.length; s++) {
+                await module.exports.execSQL(sysConnection, sqls[s], true, verbose);
+            }
             if (createDemoAccount) {
                 log.info(`Creating ${provendbDemoUser}  account`);
-                const sqls = [`CREATE USER ${provendbDemoUser} IDENTIFIED BY ` + provendbPassword,
-                    `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbDemoUser}`,
-                    `GRANT execute_catalog_role TO ${provendbDemoUser}`,
-                    `GRANT execute ON dbms_alert TO ${provendbDemoUser}`,
+                // Must succeed
+                let sqls = [`CREATE USER ${provendbDemoUser} IDENTIFIED BY ` + provendbPassword,
+                `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbDemoUser}`
                 ];
                 for (let s = 0; s < sqls.length; s++) {
                     await module.exports.execSQL(sysConnection, sqls[s], false, verbose);
                 }
-                const sqlText = `GRANT FLASHBACK ARCHIVE ADMINISTER TO ${provendbDemoUser}`;
-                await module.exports.execSQL(sysConnection, sqlText, true, verbose);
+                // These can fail
+                sqls = [
+                    `GRANT execute_catalog_role TO ${provendbDemoUser}`,
+                    `GRANT execute ON dbms_alert TO ${provendbDemoUser}`, `GRANT FLASHBACK ARCHIVE ADMINISTER TO ${provendbDemoUser}`
+                ];
+                for (let s = 0; s < sqls.length; s++) {
+                    await module.exports.execSQL(sysConnection, sqls[s], true, verbose);
+                }
             }
         } catch (error) {
             log.error('Install users failed: ', error.message);
@@ -829,7 +860,7 @@ module.exports = {
     // Process changes for a single table
     process1TableChanges: async (tableDef, adHoc, where, includeScn, scnValue) => {
         log.info('Processing ', ' ', tableDef.tableOwner, '.', tableDef.tableName);
-        log.info (' Where: ', where);
+        log.info(' Where: ', where);
 
         const tableName = `${tableDef.tableOwner}.${tableDef.tableName}`;
 
@@ -887,9 +918,9 @@ module.exports = {
             log.trace(sqlText);
             const results = await oraConnection.execute(
                 sqlText, {}, {
-                    resultSet: true,
-                    fetchArraySize: 1000
-                }
+                resultSet: true,
+                fetchArraySize: 1000
+            }
             );
 
             console.log('Table: ', tableName);
@@ -1149,8 +1180,8 @@ module.exports = {
         const results = await oraConnection.execute(
             'SELECT rowid_scn FROM proofablecontrolrowids WHERE trieid=:1',
             [trieId], {
-                resultSet: true
-            }
+            resultSet: true
+        }
         );
         const rowBatch = 100;
         let rows = await results.resultSet.getRows(rowBatch);
