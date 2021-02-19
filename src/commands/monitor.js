@@ -30,6 +30,7 @@ class MonitorCommand extends Command {
             const {
                 tables,
                 interval,
+                maxTime,
                 verbose
             } = flags;
 
@@ -47,10 +48,21 @@ class MonitorCommand extends Command {
             await connectToOracle(config, verbose);
             await connectToProofable(config, verbose);
             await checkTables(tables);
-            log.info(`Monitoring with ${interval}ms interval.`);
+            log.info(`Monitoring with ${interval} ms interval.`);
             // eslint-disable-next-line no-constant-condition
-            while (true) {
-                await processTableChanges(config,tables);
+
+            const monitorStartTime = (new Date().getTime());
+            let monitorLoop = true;
+            while (monitorLoop) {
+                const elapsedTime = (new Date().getTime())-monitorStartTime;
+                log.trace(`Elapsed time ${elapsedTime}`);
+                if ((elapsedTime > (maxTime * 1000)) && maxTime > 0) {
+                    log.info(`Max monitoring time ${maxTime} exceeded`);
+                    log.info('Exiting');
+                    monitorLoop = false;
+                    break;
+                }
+                await processTableChanges(config, tables);
                 await monitorSleep(interval, config);
             }
         } catch (error) {
@@ -72,6 +84,11 @@ MonitorCommand.flags = {
         char: 'i',
         description: 'polling interval',
         default: 120
+    }),
+    maxTime: flags.integer({
+        char: 'm',
+        description: 'Maximum number of seconds to monitor',
+        default: 0
     }),
     verbose: flags.boolean({
         char: 'v',

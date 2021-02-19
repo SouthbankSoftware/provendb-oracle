@@ -41,7 +41,7 @@ describe('provendb-oracle Anchor tests', () => {
         let installCmd = `install --config=testConfig.yaml --createDemoAccount --dropExisting \
             --oracleConnect=${parameters.P4O_ORACLE_SERVER} \
             --provendbPassword=myLong_Password_23 --provendbUser=${provendbUser}`;
-        if (parameters.P4O_ORACLE_USERNAME === 'sys') {
+        if (parameters.P4O_ORACLE_USERNAME.toLowerCase() === 'sys') {
             installCmd += ` --sysPassword=${parameters.P4O_ORACLE_PASSWORD}`;
         } else {
             installCmd += ` --dbaUserName=${parameters.P4O_ORACLE_USERNAME} --dbaPassword=${parameters.P4O_ORACLE_PASSWORD}`;

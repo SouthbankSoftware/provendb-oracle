@@ -139,11 +139,13 @@ OPTIONS
   -v, --verbose                        increased logging verbosity
   --config=config                      Create config file
   --createDemoAccount                  Create the ProofableDemo account
+  --dbaPassword=dbaPassword            DBA Password
+  --dbaUserName=dbaUserName            DBA Username
   --dropExisting                       Drop existing users if they exist
   --oracleConnect=oracleConnect        (required) Oracle connection String
   --provendbPassword=provendbPassword  (required) ProvenDB User Password
   --provendbUser=provendbUser          [default: provendb] ProvenDB User Name (defaut: provendb)
-  --sysPassword=sysPassword            SYS Password
+  --sysPassword=sysPassword            SYS Password (instead of DBA username/password)
 ```
 
 _See code: [src/commands/install.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.0.0/src/commands/install.js)_
@@ -158,6 +160,7 @@ USAGE
 
 OPTIONS
   -i, --interval=interval  [default: 120] polling interval
+  -m, --maxTime=maxTime    Maximum number of seconds to monitor
   -v, --verbose            increased logging verbosity
   --config=config          config file location
   --tables=tables          (required) tables to anchor

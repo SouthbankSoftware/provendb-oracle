@@ -47,6 +47,9 @@ oracledb.autoCommit = false;
 let oraConnection = {};
 const tableDefs = [];
 // TODO: Need to get rid of the tableDefs global.
+let monitorStartTime;
+
+
 module.exports = {
     connectToOracleDirect: async (connectString, user, password, verbose = false) => {
         if (verbose) {
@@ -240,7 +243,7 @@ module.exports = {
         try {
             const results = await oraConnection.execute('select default_tablespace from user_users');
             const defaultTablespace = results.rows[0][0];
-            const sqls = [];
+            let sqls = [];
             sqls.push(
                 ` CREATE TABLE contractsTable(
                       contractId   NUMBER PRIMARY KEY,
@@ -259,20 +262,6 @@ module.exports = {
                               contractData VARCHAR2(4000) NOT NULL,
                               mytimestamp TIMESTAMP
                             )`
-            );
-            sqls.push(
-                `CREATE OR REPLACE TRIGGER contractsTable_proofable_trg 
-                    AFTER INSERT OR UPDATE OR DELETE ON contractsTable
-                    BEGIN 
-                      DBMS_ALERT.SIGNAL('provendb_alert','proofable table modified'); 
-                    END; `
-            );
-            sqls.push(
-                `CREATE OR REPLACE TRIGGER contractsTableFB_proofable_trg 
-                    AFTER INSERT OR UPDATE OR DELETE ON contractstablefbda
-                    BEGIN 
-                        DBMS_ALERT.SIGNAL('provendb_alert','proofable table modified'); 
-                    END; `
             );
             sqls.push(
                 'CREATE SEQUENCE contract_seq '
@@ -297,16 +286,32 @@ module.exports = {
             );
             sqls.push('INSERT INTO contractsTableFBDA SELECT * FROM contractsTable');
             sqls.push('commit');
+            sqls.push('GRANT ALL ON contractsTableFBDA TO PUBLIC');
+            sqls.push('GRANT ALL ON contractsTable TO PUBLIC');
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(oraConnection, sqls[s], false, verbose);
             }
-            await module.exports.execSQL(oraConnection,
-                `CREATE flashback archive ${provendbDemoUser} tablespace ${defaultTablespace} retention 1 month`,
-                true, verbose);
-            await module.exports.execSQL(oraConnection,
-                `ALTER table contractsTableFBDA flashback archive ${provendbDemoUser} 
-                     `,
-                true, verbose);
+            // These can fail.
+            sqls = [];
+            sqls.push(
+                `CREATE OR REPLACE TRIGGER contractsTable_proofable_trg 
+                    AFTER INSERT OR UPDATE OR DELETE ON contractsTable
+                    BEGIN 
+                      DBMS_ALERT.SIGNAL('provendb_alert','proofable table modified'); 
+                    END; `
+            );
+            sqls.push(
+                `CREATE OR REPLACE TRIGGER contractsTableFB_proofable_trg 
+                    AFTER INSERT OR UPDATE OR DELETE ON contractstablefbda
+                    BEGIN 
+                        DBMS_ALERT.SIGNAL('provendb_alert','proofable table modified'); 
+                    END; `
+            );
+            sqls.push(`CREATE flashback archive ${provendbDemoUser} tablespace ${defaultTablespace} retention 1 month`);
+            sqls.push(`ALTER table contractsTableFBDA flashback archive ${provendbDemoUser}`);
+            for (let s = 0; s < sqls.length; s++) {
+                await module.exports.execSQL(oraConnection, sqls[s], true, verbose);
+            }
         } catch (error) {
             log.error(`Install ${provendbDemoUser} user failed: `, error.message);
             throw (error);
@@ -757,6 +762,7 @@ module.exports = {
     // Wait on a timeout but awake if someone fires the provendb_alert alert
     monitorSleep: async (timeout, config) => {
         log.info(`Sleeping for ${timeout} seconds `);
+
         if (config.dbmsAlert) {
             log.info('Will awake on dbms_alert');
             await oraConnection.execute(`
