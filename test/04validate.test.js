@@ -10,7 +10,8 @@ const {
 } = require('./testCommon');
 
 const parameters = getParameters();
-const demoSchema = parameters.config.oracleConnection.user.toUpperCase() + 'DEMO';
+const provendbUser = parameters.config.oracleConnection.user.toUpperCase();
+const demoSchema = provendbUser + 'DEMO';
 
 
 
@@ -77,10 +78,11 @@ describe('provendb-oracle Anchor tests', () => {
 
     test('Validate all Proofs', async () => {
         jest.setTimeout(120000);
+        console.log(provendbUser);
         const oraConnection = await oracledb.getConnection({
-            connectString: 'testdb',
-            user: 'provendbtest',
-            password: 'DBEnvy2016'
+            connectString: parameters.P4O_ORACLE_SERVER,
+            user: provendbUser,
+            password: 'myLongPassword23'
         });
         const result = await oraConnection.execute('select trieid from PROOFABLECONTROL');
         let output;

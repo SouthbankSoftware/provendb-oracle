@@ -1,4 +1,4 @@
-./provendb-oracle install --config=test.yaml --createDemoAccount --dropExisting --oracleConnect=centosdb --provendbPassword=DBEnvy2016 --provendbUser=testprovendb --sysPassword=DBEnvy2016
+./provendb-oracle install --config=test.yaml --createDemoAccount --dropExisting --oracleConnect=centosdb --provendbPassword=myLongPassword23 --provendbUser=testprovendb --sysPassword=myLongPassword23
 ./provendb-oracle anchor  --tables=PROVENDBDEMO.CONTRACTSTABLE --where "CONTRACTID<3"
 ./provendb-oracle anchor  --tables=PROVENDBDEMO.CONTRACTSTABLE --where "CONTRACTID<3" --validate=myproof.proof --includeRowIds
 ./provendb-oracle anchor  --tables=PROVENDBDEMO.CONTRACTSTABLE --where "CONTRACTID<3" --validate=myproof.proof --includeRowIds --includeScn

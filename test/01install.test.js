@@ -33,14 +33,14 @@ describe('provendb-oracle Anchor tests', () => {
         jest.setTimeout(120000);
         try {
             execSync('rm testConfig.yaml');
-        } catch (error) { 
-            console.log(error.message); 
+        } catch (error) {
+            console.log(error.message);
         }
         const provendbUser = 'provendbTest' + Math.round(Math.random() * 10000);
 
         let installCmd = `install --config=testConfig.yaml --createDemoAccount --dropExisting \
             --oracleConnect=${parameters.P4O_ORACLE_SERVER} \
-            --provendbPassword=myLong_Password_23 --provendbUser=${provendbUser}`;
+            --provendbPassword=myLongPassword23 --provendbUser=${provendbUser}`;
         if (parameters.P4O_ORACLE_USERNAME.toLowerCase() === 'sys') {
             installCmd += ` --sysPassword=${parameters.P4O_ORACLE_PASSWORD}`;
         } else {
