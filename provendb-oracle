@@ -1,1 +1,1 @@
-node bin/run.js  $*
+node ~/git/provendb-oracle/bin/run.js  $*
