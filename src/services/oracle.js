@@ -1074,6 +1074,9 @@ module.exports = {
     validateRow: async (rowidKey, outputFile, verbose = false, silent = false) => {
         // Output files
         try {
+            if (verbose) {
+                log.setLevel('trace');
+            }
             const tmpDir = tmp.dirSync().name;
             let fileRowidKey = rowidKey;
             if (rowidKey.match('/')) {
