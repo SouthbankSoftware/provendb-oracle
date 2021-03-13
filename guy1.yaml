@@ -1,0 +1,9 @@
+oracleConnection:
+  connectString: 'mubuntu.local:1526/ORCLPDB1'
+  user: provendb
+  password: myLongPassword23
+anchorType: HEDERA_MAINNET
+dbmsAlert: 'TRUE'
+proofable:
+  token: YourTokenHere
+  endpoint: 'api.proofable.io:443'

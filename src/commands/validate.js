@@ -47,7 +47,8 @@ class ValidateCommand extends Command {
             if (flags.output) {
                 outputFile = flags.output;
             } else if (flags.rowId) {
-                outputFile = `${rowId}.provendb`;
+                const rowIdFile = rowId.replace(/\//g, '-'); // Sometimes rowIds have "/"
+                outputFile = `${rowIdFile}.provendb`;
             } else {
                 outputFile = `${proofId}.provendb`;
             }

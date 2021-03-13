@@ -26,7 +26,7 @@ class InstallCommand extends Command {
             const {
                 flags
             } = this.parse(InstallCommand);
-            const {
+            let {
                 verbose,
                 oracleConnect,
                 provendbUser,
@@ -47,6 +47,7 @@ class InstallCommand extends Command {
             let effectiveDbaPassword = dbaPassword;
 
             if (!flags.sysPassword && !flags.dbaUserName && !flags.dbaPassword) {
+                // TODO: Assignment to contant variable error caused here
                 sysPassword = await passwordPrompt('Enter SYS password: ', {
                     method: 'mask'
                 });

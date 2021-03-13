@@ -1,0 +1,1 @@
+provendb-oracle install --config=guy1.yaml --createDemoAccount --dropExisting --oracleConnect=mubuntu.local:1526/ORCLPDB1 --provendbPassword=myLongPassword23 --sysPassword=myLongPassword23
