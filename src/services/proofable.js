@@ -24,6 +24,8 @@ const fs = require('fs');
 const log = require('simple-node-logger').createSimpleLogger();
 const proofable = require('proofable');
 const tmp = require('tmp');
+const merkleJs = require('provendb-merkle-js');
+
 
 let proofableClient;
 
@@ -40,10 +42,14 @@ module.exports = {
         await this.connectToProofable(config);
         return proofableClient;
     },
-    // Validate data against an existing trie 
+    // Validate data against an existing trie
     validateData: async (trie, keyvalues, outputFile, verbose) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
         const newSortedData = await proofable.sortKeyValues(proofable.dataToKeyValues(
-            keyvalues));
+            keyvalues
+        ));
         const validatedProof = await proofableClient.verifyTrieWithSortedKeyValues(trie,
             newSortedData);
         if (validatedProof.keyValues.total !== validatedProof.keyValues.passed) {
@@ -61,19 +67,29 @@ module.exports = {
 
     // Anchor data to a blockchain - create a trie and anchor that trie
     anchorData: async (data, anchorChainType) => {
-        log.info('--> Anchoring data to ', anchorChainType);
-        log.info(Object.keys(data.keyValues).length, ' keys');
-        const inputData = await proofable.dataToKeyValues(data.keyValues);
-        // log.trace(inputData);
-        const trie = await proofableClient.createTrieFromKeyValues(inputData);
-        // log.trace(trie);
-        // await new Promise((resolve) => setTimeout(resolve, 2000));
-        const anchoredTrie = await proofableClient.anchorTrie(
-            trie,
-            proofable.Anchor.Type[anchorChainType],
-        );
-        log.trace('anchoredTrie->', anchoredTrie);
-        return anchoredTrie;
+        try {
+            log.info('--> Anchoring data to ', anchorChainType);
+            log.info(Object.keys(data.keyValues).length, ' keys');
+
+            hashValues = [];
+            Object.keys(data.keyValues).sort().forEach((key) => {
+                hashValues.push(Buffer.from(data.keyValues[key]));
+            });
+            const builder = merkleJs.MerkleTree.builder('sha256');
+            builder.addBatch(hashValues);
+            const tree = builder.build();
+            console.log(Object.keys(tree));
+            const handle = await tree.createProof({ address: 'localhost:10008' }, merkleJs.proto.Anchor.Type[anchorChainType]);
+            const anchoredProof = await handle.onComplete();
+            tree.addProof(anchoredProof);
+            anchoredProof.keyValues = data.keyValues;
+            log.info('Anchored to ', anchoredProof.metadata.txnUri);
+            return {tree, anchoredProof};
+        } catch (error) {
+            log.info(error.message);
+            log.error(error.trace);
+            throw new Error(error);
+        }
     },
 
     // Take raw trie data and import it into a proper trie object
@@ -138,7 +154,7 @@ module.exports = {
             proofFile,
         );
         try {
-            // TODO: Ask Guan to return dot file 
+            // TODO: Ask Guan to return dot file
             await proofableClient.createKeyValuesProof(
                 trie.getId(),
                 proofId,

@@ -19,6 +19,7 @@
         "makensis": "^0.21.3",
         "minimist": "^0.2.1",
         "oracledb": "^5.0.0",
+        "provendb-merkle-js": "github:SouthbankSoftware/provendb-merkle-js",
         "password-prompt": "^1.1.2",
         "pkg": "^4.4.9",
         "proofable": "^0.2.16",

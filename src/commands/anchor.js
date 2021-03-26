@@ -10,7 +10,7 @@ const {
     connectToOracle,
     check1table,
     process1TableChanges,
-    saveTrieToDB,
+    saveproofToDB,
     createProofFile
 } = require('../services/oracle');
 const {
@@ -68,10 +68,12 @@ class AnchorCommand extends Command {
                 if (tableDef.exists) {
                     log.trace('Processing ', tableDef);
                     const tableData = await process1TableChanges(tableDef, 'adhoc', where, includeScn);
-                    const anchoredTrie = await anchorData(tableData, config.anchorType);
-                    const proofId = anchoredTrie.getTrieId();
-                    await saveTrieToDB(
-                        proofId,
+ 
+                    const treeWithProof = await anchorData(tableData, config.anchorType);
+                    // console.log(treeWithProof);
+  
+                    await saveproofToDB(
+                        treeWithProof,
                         tableDef.tableOwner,
                         tableDef.tableName,
                         tableData,
@@ -81,7 +83,7 @@ class AnchorCommand extends Command {
                     );
                     log.info(`Proof ${proofId} created and stored to DB`);
                     if (flags.validate) {
-                        await createProofFile(anchoredTrie.getTrieId(), outputFile, includeRowIds, verbose);
+                        await createProofFile(treeWithProof.getTrieId(), outputFile, includeRowIds, verbose);
                         log.info('Proof written to ', outputFile);
                     }
                 }

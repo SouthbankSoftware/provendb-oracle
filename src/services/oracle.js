@@ -38,7 +38,7 @@ const {
 const {
     anchorData,
     getProofableClient,
-    parseTrie,
+    parseproof,
     generateRowProof,
     validateData
 } = require('./proofable');
@@ -163,53 +163,53 @@ module.exports = {
             const sqls = [];
             // TODO: Rename these table to provendbcontrol
             sqls.push(
-                `CREATE TABLE proofablecontrol (
+                `CREATE TABLE provendbcontrol (
                     owner_name   VARCHAR2(128) NOT NULL,
                     table_name   VARCHAR2(128) NOT NULL,
                     start_time   DATE NOT NULL,
                     end_time     DATE NOT NULL,
                     start_scn    NUMBER,
                     end_scn      NUMBER,
-                    trieid       VARCHAR2(256),
-                    trie         CLOB NOT NULL,
-                    trieType     VARCHAR2(30) NOT NULL,
+                    proofid       VARCHAR2(256),
+                    proof         CLOB NOT NULL,
+                    proofType     VARCHAR2(30) NOT NULL,
                     whereclause VARCHAR2(2000),
                     metadata     VARCHAR2(4000) CHECK (metadata IS JSON),
-                    CONSTRAINT table1_pk PRIMARY KEY ( trieid )
+                    CONSTRAINT table1_pk PRIMARY KEY ( proofid )
                         USING INDEX (
                             CREATE UNIQUE INDEX table1_pk ON
-                                proofablecontrol (
-                                    trieid
+                                provendbcontrol (
+                                    proofid
                                 ASC )
                         )
                     ENABLE)`
             );
 
             sqls.push(
-                `CREATE INDEX proofablecontrol_i1 ON
-                          proofablecontrol (
+                `CREATE INDEX provendbcontrol_i1 ON
+                          provendbcontrol (
                               owner_name,
                               table_name,
                               start_time,
                               end_time)`
             );
             sqls.push(
-                `CREATE TABLE proofablecontrolrowids (
-                            trieid            VARCHAR2(256) NOT NULL,
+                `CREATE TABLE provendbcontrolrowids (
+                            proofid            VARCHAR2(256) NOT NULL,
                             rowid_scn   VARCHAR2(128) NOT NULL,
                             versions_starttime timestamp not null,
-                            CONSTRAINT proofablecontrolrowids_pk 
-                            PRIMARY KEY ( trieid,rowid_scn ) ENABLE)`
+                            CONSTRAINT provendbcontrolrowids_pk 
+                            PRIMARY KEY ( proofid,rowid_scn ) ENABLE)`
             );
             sqls.push(
-                `ALTER TABLE proofablecontrolrowids
-                          ADD CONSTRAINT proofablecontrolrowids_fk1 FOREIGN KEY ( trieid )
-                              REFERENCES proofablecontrol ( trieid )
+                `ALTER TABLE provendbcontrolrowids
+                          ADD CONSTRAINT provendbcontrolrowids_fk1 FOREIGN KEY ( proofid )
+                              REFERENCES provendbcontrol ( proofid )
                           ENABLE`
             );
             sqls.push(
-                `CREATE INDEX proofablecontrolrowids_i1 
-                    ON proofablecontrolrowids(rowid_scn)`
+                `CREATE INDEX provendbcontrolrowids_i1 
+                    ON provendbcontrolrowids(rowid_scn)`
             );
 
             for (let s = 0; s < sqls.length; s++) {
@@ -556,7 +556,7 @@ module.exports = {
         if (await module.exports.tableExists(user, table)) {
             const fbdaData = await module.exports.getFBDAdetails(user, table);
             const MaxEndTimeResult = await oraConnection.execute(
-                `SELECT MAX(end_time) MAXENDTIME from proofablecontrol
+                `SELECT MAX(end_time) MAXENDTIME from provendbcontrol
             WHERE owner_name=:1
              AND table_name=:2`,
                 [user, table],
@@ -684,13 +684,13 @@ module.exports = {
                 startscn: startScn,
                 currentscn: currentScn,
             });
-            log.trace(result.rows.length, ' rows retrieved');
+            log.trace(result.rows.length, ' rows reproofved');
         } catch (error) {
             log.error(error.message);
             if (error.errorNum === 30052) {
                 // We don't have flashback data since the last monitored sample
                 log.error('Insufficient flashback history to capture all changes since last sample');
-                log.info('Attempting to retrieve current state');
+                log.info('Attempting to reproofve current state');
                 sqlText = module.exports.firstTimeTableQuery(tableName);
                 result = await oraConnection.execute(sqlText, {
                     startscn: currentScn,
@@ -704,16 +704,16 @@ module.exports = {
     },
 
     // List known versions of a specific Rowid
-    listEntries: async (rowid) => {
+    listEnproofs: async (rowid) => {
         try {
             const format = '%-18s %-22s %-26s %-24s %-24s';
             console.log('\n');
             console.log(sprintf(format, 'Rowid', 'Proof', 'key', 'startDate', 'endDate'));
             const rowidPattern = `${rowid}.%`;
             const sqlText = `
-                SELECT rowid_scn,trieid,start_time,end_time 
-                FROM proofablecontrolrowids 
-                JOIN proofablecontrol USING(trieid)
+                SELECT rowid_scn,proofid,start_time,end_time 
+                FROM provendbcontrolrowids 
+                JOIN provendbcontrol USING(proofid)
                 WHERE rowid_scn LIKE :1 or rowid_scn=:2
                 ORDER BY start_time 
   `;
@@ -789,9 +789,10 @@ module.exports = {
             log.trace('Processing ', tableDef);
             const tableData = await module.exports.process1TableChanges(tableDef, false, null, true, null);
             if (Object.keys(tableData.keyValues).length > 0) {
-                const anchoredTrie = await anchorData(tableData, config.anchorType);
-                await module.exports.saveTrieToDB(
-                    anchoredTrie.getTrieId(),
+                const treeWithProof = await anchorData(tableData, config.anchorType);
+
+                await module.exports.saveproofToDB(
+                    treeWithProof,
                     tableDef.tableOwner,
                     tableDef.tableName,
                     tableData,
@@ -803,59 +804,58 @@ module.exports = {
         }
     },
 
-    // Save a trie to the Proofable control table
-    saveTrieToDB: async (trieId, tableOwner, tableName, tableData, trieType, whereclause, includeScn) => {
+    // Save a proof to the Proofable control table
+    saveproofToDB: async (treeWithProof, tableOwner, tableName, tableData, proofType, whereclause, includeScn) => {
         try {
-            log.trace(`Saving proof ${trieId} to db`);
-            const tmpFile = tmp.fileSync();
-            const trieFileName = tmpFile.name;
-
-            const proofableClient = await getProofableClient();
-            await proofableClient.exportTrie(trieId, trieFileName);
-            const trieData = fs.readFileSync(trieFileName, 'base64');
+ 
+            console.log(JSON.stringify(treeWithProof));
+            const proof = treeWithProof.anchoredProof;
+            const proofId = proof.data.hash_id_node;
+            log.info(`Saving proof ${proofId} to db`);
+ 
 
             // Create an array of bind variables for array insert
             const rowIdBindData = [];
             Object.keys(tableData.keyValues).forEach((key) => {
                 // const timePart = new Date(Number(key.split('.')[1]));
-                rowIdBindData.push([trieId, key, new Date(tableData.keyTimeStamps[key])]);
+                rowIdBindData.push([proofId, key, new Date(tableData.keyTimeStamps[key])]);
             });
             const metadata = {
                 tableOwner,
                 tableName,
-                trieType,
+                proofType,
                 whereclause,
                 currentScn: tableData.currentScn,
                 includeScn
             };
             const insOut = await oraConnection.execute(
-                `INSERT INTO proofablecontrol 
-                        (trieId, trie, owner_name, table_name, 
-                         start_time, end_time ,start_scn, end_scn,trieType,whereclause,metadata) 
+                `INSERT INTO provendbcontrol 
+                        (proofId, proof, owner_name, table_name, 
+                         start_time, end_time ,start_scn, end_scn,proofType,whereclause,metadata) 
                   VALUES(:1, :2, :3, :4, :5 , :6, :7, :8,:9,:10,:11)`,
                 [
-                    trieId,
-                    trieData,
+                    proofId,
+                    JSON.stringify(treeWithProof),
                     tableOwner,
                     tableName,
                     new Date(tableData.minStartTime),
                     new Date(tableData.maxStartTime),
                     tableData.minStartScn,
                     tableData.maxStartScn,
-                    trieType,
+                    proofType,
                     whereclause,
                     JSON.stringify(metadata)
                 ],
             );
-            log.trace(`${insOut.rowsAffected} rows inserted into proofableControl`);
+            log.info(`${insOut.rowsAffected} rows inserted into provendbcontrol`);
 
             const ins2Out = await oraConnection.executeMany(
-                `INSERT INTO proofablecontrolrowids 
-                 (trieId, rowid_scn, versions_starttime ) 
+                `INSERT INTO provendbcontrolrowids 
+                 (proofId, rowid_scn, versions_starttime ) 
                   VALUES(:1, :2, :3 )`,
                 rowIdBindData,
             );
-            log.trace(`${ins2Out.rowsAffected} rows inserted into proofableControlrowids`);
+            log.info(`${ins2Out.rowsAffected} rows inserted into provendbcontrolrowids`);
             await oraConnection.commit();
         } catch (error) {
             log.error(error.message);
@@ -913,7 +913,7 @@ module.exports = {
         };
     },
 
-    listTableEntries: async (tables, where) => {
+    listTableEnproofs: async (tables, where) => {
         for (let ti = 0; ti < tables.length; ti++) {
             const tableName = tables[ti];
 
@@ -937,7 +937,7 @@ module.exports = {
             let row = await results.resultSet.getRow();
             while (row) {
                 const rowId = row[0];
-                await module.exports.listEntries(rowId);
+                await module.exports.listEnproofs(rowId);
                 row = await results.resultSet.getRow();
             }
             await results.resultSet.close();
@@ -965,8 +965,8 @@ module.exports = {
       SELECT MAX(start_time) max_start_time, MAX(end_time) max_end_time,
              MAX(start_scn) max_start_scn,MAX(end_scn) max_end_scn,
              COUNT(*) count
-        FROM proofablecontrol
-       WHERE owner_name=:1 and table_name=:2 and trietype='Monitor'
+        FROM provendbcontrol
+       WHERE owner_name=:1 and table_name=:2 and prooftype='Monitor'
   `;
             const result = await oraConnection.execute(SQLText, [tableOwner, tableName]);
             const row = result.rows[0];
@@ -987,7 +987,7 @@ module.exports = {
     getLatestRowidKey: async (rowid) => {
         const result = await oraConnection.execute(
             `SELECT rowid_scn,versions_starttime
-                FROM proofablecontrolrowids
+                FROM provendbcontrolrowids
                 WHERE rowid_scn LIKE :1
                     OR rowid_scn = :2
                 ORDER BY versions_starttime DESC
@@ -999,15 +999,15 @@ module.exports = {
         return highestRowidKey;
     },
     // TODO: Examples should include a FBDA managed table
-    // Get trie for a specific rowidStarttime key
-    getTrieForRowid: async (rowidScn) => {
+    // Get proof for a specific rowidStarttime key
+    getproofForRowid: async (rowidScn) => {
         const result = await oraConnection.execute(
             `
-                SELECT trieid,
+                SELECT proofid,
                         owner_name,
                         table_name
-                FROM proofablecontrolrowids
-                JOIN proofablecontrol USING ( trieid )
+                FROM provendbcontrolrowids
+                JOIN provendbcontrol USING ( proofid )
                 WHERE rowid_scn = :1
                 ORDER BY versions_starttime DESC
                 FETCH FIRST 1 ROWS ONLY
@@ -1015,29 +1015,29 @@ module.exports = {
             [rowidScn],
         );
         if (result.rows.length === 0) {
-            throw new Error('No such rowid.startTime - check proofableControlsRowids table');
+            throw new Error('No such rowid.startTime - check provendbcontrolsRowids table');
         }
 
-        const trieId = result.rows[0][0];
+        const proofId = result.rows[0][0];
         const tableOwner = result.rows[0][1];
         const tableName = result.rows[0][2];
-        log.trace(`identifier ${rowidScn} is found in trie ${trieId}`);
-        const trie = await module.exports.getTrieFromDB(trieId);
+        log.trace(`identifier ${rowidScn} is found in proof ${proofId}`);
+        const proof = await module.exports.getproofFromDB(proofId);
         return {
-            trie,
+            proof,
             tableOwner,
             tableName,
         };
     },
-    getTrieFromDB: async (trieId, verbose = false) => {
+    getproofFromDB: async (proofId, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
-        log.trace(`Getting ${trieId} from DB`);
+        log.trace(`Getting ${proofId} from DB`);
 
         const options = {
             fetchInfo: {
-                TRIE: {
+                proof: {
                     type: oracledb.STRING,
                 },
             },
@@ -1045,29 +1045,29 @@ module.exports = {
         try {
             const data = await oraConnection.execute(
                 `
-                SELECT trie, owner_name, table_name,
+                SELECT proof, owner_name, table_name,
                         start_time, end_time
-                    FROM proofablecontrol
-                WHERE trieid = :1
+                    FROM provendbcontrol
+                WHERE proofid = :1
     `,
-                [trieId],
+                [proofId],
                 options,
             );
             if (data.rows.length === 0) {
-                log.error('Internal error retrieving trie ', trieId);
+                log.error('Internal error reproofving proof ', proofId);
             }
 
-            const trieDataOut = data.rows[0][0];
+            const proofDataOut = data.rows[0][0];
             const tableOwner = data.rows[0][1];
             const tableName = data.rows[0][2];
             const startTime = data.rows[0][3];
             const endTime = data.rows[0][4];
-            log.trace('Retrieved Trie ', trieId, ' for ', tableOwner, '.', tableName);
+            log.trace('Reproofved proof ', proofId, ' for ', tableOwner, '.', tableName);
             log.trace(' Data range ', startTime, ' to ', endTime);
-            const trie = await parseTrie(trieDataOut);
-            return trie;
+            const proof = await parseproof(proofDataOut);
+            return proof;
         } catch (error) {
-            log.error(error.message, ' while retrieving trie from db');
+            log.error(error.message, ' while reproofving proof from db');
         }
     },
     // Validate a rowid/timstamp key
@@ -1090,7 +1090,7 @@ module.exports = {
             log.trace('temp dir and files ', tmpDir, ' ', proofFile, ' ', dotFile, ' ', jsonFile);
 
             let dataRowidKey;
-            let trieRowIdKey;
+            let proofRowIdKey;
 
             const splitRowId = rowidKey.split('.');
             if (splitRowId.length === 1) {
@@ -1098,35 +1098,35 @@ module.exports = {
                 // most recent rowid Key with the data associated with the current SCN
                 const currentScn = await module.exports.getSCN();
                 dataRowidKey = rowidKey + '.' + currentScn;
-                trieRowIdKey = await module.exports.getLatestRowidKey(rowidKey); // Get most recent rowidkey
+                proofRowIdKey = await module.exports.getLatestRowidKey(rowidKey); // Get most recent rowidkey
             } else {
                 dataRowidKey = rowidKey;
-                trieRowIdKey = rowidKey;
+                proofRowIdKey = rowidKey;
             }
 
             log.trace('Data Rowid Key ', dataRowidKey);
-            log.trace('Trie Rowid Key ', trieRowIdKey);
+            log.trace('proof Rowid Key ', proofRowIdKey);
 
-            // Retrive the trie and proof for this key
+            // Retrive the proof and proof for this key
             const {
-                trie,
+                proof,
                 tableOwner,
                 tableName
-            } = await module.exports.getTrieForRowid(trieRowIdKey);
+            } = await module.exports.getproofForRowid(proofRowIdKey);
             const proofableClient = await getProofableClient();
-            const proofId = (await proofableClient.getTrieProof(trie.getId())).getId();
+            const proofId = (await proofableClient.getproofProof(proof.getId())).getId();
 
             // Get the current state of data
             const rowData = await module.exports.getRowData(tableOwner, tableName, dataRowidKey, verbose);
 
             log.trace('key/value for rowProof ', rowData);
-            // Change rowData key to match trie key
-            // (eg, make the rowid.scn number the same as is in the trie)
-            rowData.key = trieRowIdKey;
+            // Change rowData key to match proof key
+            // (eg, make the rowid.scn number the same as is in the proof)
+            rowData.key = proofRowIdKey;
 
-            // generate a rowProof based on the trie and current data
+            // generate a rowProof based on the proof and current data
 
-            const rowProof = await generateRowProof(rowData, trie, proofId, proofFile, dotFile, verbose);
+            const rowProof = await generateRowProof(rowData, proof, proofId, proofFile, dotFile, verbose);
             if (rowProof.keyValues.total === rowProof.keyValues.passed && rowProof.keyValues.passed === 1) {
                 if ((!silent) || verbose) log.info('Rowid validation passed ', rowProof.keyValues);
             } else {
@@ -1149,30 +1149,30 @@ module.exports = {
         }
     },
     // TODO: Use --unhandled-rejections=strict
-    // TODO: Optimize - dont' get trie every time from db.  Optionally don't validate
+    // TODO: Optimize - dont' get proof every time from db.  Optionally don't validate
     // TODO: Ask Guan for a server side function to produce proof file.
-    createProofFile: async (trieId, outputFile, includeRowIds = false, verbose = false) => {
+    createProofFile: async (proofId, outputFile, includeRowIds = false, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
         try {
-            log.info(`Writing proof for ${trieId} to ${outputFile}`);
+            log.info(`Writing proof for ${proofId} to ${outputFile}`);
 
-            // const trie = module.exports.getTrieFromDB(trieId, verbose);
+            // const proof = module.exports.getproofFromDB(proofId, verbose);
 
             const proofableClient = await getProofableClient();
 
             const tmpDir2 = tmp.dirSync().name;
-            const trieProof = `${tmpDir2}/${trieId}.provendb`;
-            await proofableClient.exportTrie(trieId, trieProof);
+            const proofProof = `${tmpDir2}/${proofId}.provendb`;
+            await proofableClient.exportproof(proofId, proofProof);
 
             log.trace('Writing to ', outputFile);
             const zipFile = new AdmZip();
-            await zipFile.addLocalFile(trieProof);
+            await zipFile.addLocalFile(proofProof);
 
             if (includeRowIds) {
                 const rowProofTmpDir = tmp.dirSync().name;
-                await module.exports.genRowProofs(trieId, rowProofTmpDir, verbose);
+                await module.exports.genRowProofs(proofId, rowProofTmpDir, verbose);
                 await zipFile.addLocalFolder(rowProofTmpDir, 'rowProofs');
             }
 
@@ -1180,15 +1180,15 @@ module.exports = {
             log.info(`Wrote proof file to ${outputFile}`);
             // TODO: Add a README to the zip
         } catch (error) {
-            log.error(error.message, ' while retrieving rowids for proof');
+            log.error(error.message, ' while reproofving rowids for proof');
             throw (error);
         }
     },
-    genRowProofs: async (trieId, tmpDir, verbose) => {
+    genRowProofs: async (proofId, tmpDir, verbose) => {
         // TODO: Use cursors everywhere
         const results = await oraConnection.execute(
-            'SELECT rowid_scn FROM proofablecontrolrowids WHERE trieid=:1',
-            [trieId], {
+            'SELECT rowid_scn FROM provendbcontrolrowids WHERE proofid=:1',
+            [proofId], {
             resultSet: true
         }
         );
@@ -1210,7 +1210,7 @@ module.exports = {
                     await module.exports.validateRow(rowIdScn, outFile, verbose, true);
                     process.stdout.write('.');
                 } catch (error) {
-                    log.error(error.message, ` while retrieving rowid ${rowIdScn} for proof`);
+                    log.error(error.message, ` while reproofving rowid ${rowIdScn} for proof`);
                     console.log(error);
                     throw (error);
                 }
@@ -1226,27 +1226,27 @@ module.exports = {
             log.setLevel('trace');
         }
         try {
-            log.trace('Retrieving proof details for ', proofId);
+            log.trace('Reproofving proof details for ', proofId);
             const {
                 tableDef,
-                trietype,
+                prooftype,
                 where,
                 metadata
             } = await module.exports.getProofDetails(proofId, verbose);
             if (tableDef.exists) {
-                // Get trie as well
+                // Get proof as well
                 log.info('Getting Proof');
-                const trie = await module.exports.getTrieFromDB(proofId);
-                // Get data corresponding to trie
-                if (trietype === 'AdHoc') {
+                const proof = await module.exports.getproofFromDB(proofId);
+                // Get data corresponding to proof
+                if (prooftype === 'AdHoc') {
                     log.info('Loading table data');
                     const tableData = await module.exports.process1TableChanges(tableDef, 'adhoc', where, metadata.includeScn, metadata.currentScn);
                     log.info('Validating table data against proof');
-                    const validatedProof = await validateData(trie, tableData.keyValues, outputFile, verbose);
+                    const validatedProof = await validateData(proof, tableData.keyValues, outputFile, verbose);
                     console.log(validatedProof);
                 } else {
                     // TODO: Can only validate adhoc proofs
-                    log.error(`Cannot validate ${trietype} proof yet`);
+                    log.error(`Cannot validate ${prooftype} proof yet`);
                 }
             } else {
                 log.error('Table refered to in proof no longer exists');
@@ -1268,10 +1268,10 @@ module.exports = {
                                 end_time,
                                 start_scn,
                                 end_scn,
-                                trietype,
+                                prooftype,
                                 whereclause,
                                 metadata
-                        FROM proofablecontrol where trieid=:1
+                        FROM provendbcontrol where proofid=:1
                 `, [proofId]
         );
         if (result.rows.length === 0) {
@@ -1281,14 +1281,14 @@ module.exports = {
         const row = result.rows[0];
         const userName = row[0];
         const tableName = row[1];
-        const trietype = row[6];
+        const prooftype = row[6];
         const where = row[7];
         const metadata = JSON.parse(row[8]);
         const tableDef = await module.exports.check1table(userName, tableName);
         log.trace(tableDef);
         return {
             tableDef,
-            trietype,
+            prooftype,
             where,
             metadata
         };

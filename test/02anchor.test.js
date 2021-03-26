@@ -51,7 +51,7 @@ describe('provendb-oracle Anchor tests', () => {
         jest.setTimeout(120000);
         const output = await provendbOracle(`anchor --config=testConfig.yaml   --tables=${demoSchema}.CONTRACTSTABLEFBDA --validate=testProof.proof --where="CONTRACTID>0"`);
 
-        expect(output).toEqual(expect.stringMatching('Anchoring proof: CONFIRMED'));
+        expect(output).toEqual(expect.stringMatching('Anchored to'));
         expect(output).toEqual(expect.stringMatching('Proof written to testProof.proof'));
         expect(output).toEqual(expect.stringMatching('INFO  100 keys'));
     });
