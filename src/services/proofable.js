@@ -24,7 +24,10 @@ const fs = require('fs');
 const log = require('simple-node-logger').createSimpleLogger();
 const proofable = require('proofable');
 const tmp = require('tmp');
-const merkleJs = require('provendb-merkle-js');
+const {
+    merkle,
+    anchor
+} = require('provendb-sdk-node');
 
 
 let proofableClient;
@@ -70,21 +73,27 @@ module.exports = {
         try {
             log.info('--> Anchoring data to ', anchorChainType);
             log.info(Object.keys(data.keyValues).length, ' keys');
+            const builder = new merkle.Builder('sha-256');
+            const myAnchor = anchor.connect(anchor.withAddress('localhost:10008'), anchor.withInsecure(true));
 
-            hashValues = [];
+            const keyValues = [];
             Object.keys(data.keyValues).sort().forEach((key) => {
-                hashValues.push(Buffer.from(data.keyValues[key]));
+                keyValues.push({ key, value: Buffer.from(data.keyValues[key]) });
             });
-            const builder = merkleJs.MerkleTree.builder('sha256');
-            builder.addBatch(hashValues);
+            builder.addBatch(keyValues);
             const tree = builder.build();
             console.log(Object.keys(tree));
-            const handle = await tree.createProof({ address: 'localhost:10008' }, merkleJs.proto.Anchor.Type[anchorChainType]);
-            const anchoredProof = await handle.onComplete();
+
+            const anchoredProof = await myAnchor.submitProof(tree.getRoot(),
+                anchor.submitProofWithAnchorType(anchor.Anchor.Type[anchorChainType]),
+                anchor.submitProofWithAwaitConfirmed(true));
+
             tree.addProof(anchoredProof);
-            anchoredProof.keyValues = data.keyValues;
+            console.log('=======');
+            console.log(tree);
+            console.log('=======');
             log.info('Anchored to ', anchoredProof.metadata.txnUri);
-            return {tree, anchoredProof};
+            return (tree);
         } catch (error) {
             log.info(error.message);
             log.error(error.trace);

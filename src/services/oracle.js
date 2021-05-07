@@ -29,6 +29,7 @@ const tmp = require('tmp');
 const stringify = require('json-stringify-safe');
 
 const AdmZip = require('adm-zip');
+const debug=false;
 
 
 
@@ -171,7 +172,7 @@ module.exports = {
                     start_scn    NUMBER,
                     end_scn      NUMBER,
                     proofid       VARCHAR2(256),
-                    proof         CLOB NOT NULL,
+                    proof         CLOB NOT NULL CHECK (proof IS JSON),
                     proofType     VARCHAR2(30) NOT NULL,
                     whereclause VARCHAR2(2000),
                     metadata     VARCHAR2(4000) CHECK (metadata IS JSON),
@@ -353,7 +354,7 @@ module.exports = {
             log.info(`Creating ${provendbUser}  user`);
             // SQLs that cannot fail
             let sqls = [`CREATE USER ${provendbUser}  IDENTIFIED BY ` + provendbPassword,
-            `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbUser} `,
+                `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbUser} `,
             ];
 
             for (let s = 0; s < sqls.length; s++) {
@@ -361,10 +362,10 @@ module.exports = {
             }
             // SQLs that might fail
             sqls = [`GRANT SELECT ANY TABLE TO ${provendbUser} `,
-            `GRANT ALTER SESSION to ${provendbUser} `,
-            `GRANT FLASHBACK ANY TABLE  TO ${provendbUser} `,
-            `GRANT execute_catalog_role TO ${provendbUser} `,
-            `GRANT execute ON dbms_Session to ${provendbUser} `
+                `GRANT ALTER SESSION to ${provendbUser} `,
+                `GRANT FLASHBACK ANY TABLE  TO ${provendbUser} `,
+                `GRANT execute_catalog_role TO ${provendbUser} `,
+                `GRANT execute ON dbms_Session to ${provendbUser} `
             ];
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(sysConnection, sqls[s], true, verbose);
@@ -373,7 +374,7 @@ module.exports = {
                 log.info(`Creating ${provendbDemoUser}  account`);
                 // Must succeed
                 let sqls = [`CREATE USER ${provendbDemoUser} IDENTIFIED BY ` + provendbPassword,
-                `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbDemoUser}`
+                    `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbDemoUser}`
                 ];
                 for (let s = 0; s < sqls.length; s++) {
                     await module.exports.execSQL(sysConnection, sqls[s], false, verbose);
@@ -807,12 +808,13 @@ module.exports = {
     // Save a proof to the Proofable control table
     saveproofToDB: async (treeWithProof, tableOwner, tableName, tableData, proofType, whereclause, includeScn) => {
         try {
- 
-            console.log(JSON.stringify(treeWithProof));
-            const proof = treeWithProof.anchoredProof;
-            const proofId = proof.data.hash_id_node;
+            if (debug) {
+                console.log(JSON.stringify(treeWithProof));
+            }
+
+            const proofId = treeWithProof.proofs[0].id;
             log.info(`Saving proof ${proofId} to db`);
- 
+
 
             // Create an array of bind variables for array insert
             const rowIdBindData = [];
@@ -924,9 +926,9 @@ module.exports = {
             log.trace(sqlText);
             const results = await oraConnection.execute(
                 sqlText, {}, {
-                resultSet: true,
-                fetchArraySize: 1000
-            }
+                    resultSet: true,
+                    fetchArraySize: 1000
+                }
             );
 
             console.log('Table: ', tableName);
@@ -1189,8 +1191,8 @@ module.exports = {
         const results = await oraConnection.execute(
             'SELECT rowid_scn FROM provendbcontrolrowids WHERE proofid=:1',
             [proofId], {
-            resultSet: true
-        }
+                resultSet: true
+            }
         );
         const rowBatch = 100;
         let rows = await results.resultSet.getRows(rowBatch);

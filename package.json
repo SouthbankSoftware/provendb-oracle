@@ -19,10 +19,11 @@
         "makensis": "^0.21.3",
         "minimist": "^0.2.1",
         "oracledb": "^5.0.0",
-        "provendb-merkle-js": "github:SouthbankSoftware/provendb-merkle-js",
         "password-prompt": "^1.1.2",
         "pkg": "^4.4.9",
         "proofable": "^0.2.16",
+        "provendb-merkle-js": "github:SouthbankSoftware/provendb-merkle-js",
+        "provendb-sdk-node": "github:SouthbankSoftware/provendb-sdk-node",
         "simple-node-logger": "^18.12.24",
         "sprintf-js": "^1.1.2",
         "tmp": "^0.2.1"
