@@ -29,7 +29,8 @@ const tmp = require('tmp');
 const stringify = require('json-stringify-safe');
 
 const AdmZip = require('adm-zip');
-const debug=false;
+
+const debug = false;
 
 
 
@@ -1153,28 +1154,33 @@ module.exports = {
     // TODO: Use --unhandled-rejections=strict
     // TODO: Optimize - dont' get proof every time from db.  Optionally don't validate
     // TODO: Ask Guan for a server side function to produce proof file.
-    createProofFile: async (proofId, outputFile, includeRowIds = false, verbose = false) => {
+    createProofFile: async (tree, outputFile, includeRowIds = false, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
         try {
+            const proofId = tree.proofs[0].id;
             log.info(`Writing proof for ${proofId} to ${outputFile}`);
 
             // const proof = module.exports.getproofFromDB(proofId, verbose);
-
-            const proofableClient = await getProofableClient();
-
             const tmpDir2 = tmp.dirSync().name;
-            const proofProof = `${tmpDir2}/${proofId}.provendb`;
-            await proofableClient.exportproof(proofId, proofProof);
+            const proofFile = `${tmpDir2}/${proofId}.provendb`;
+            tree.exportSync(proofFile);
 
-            log.trace('Writing to ', outputFile);
             const zipFile = new AdmZip();
-            await zipFile.addLocalFile(proofProof);
+            await zipFile.addLocalFile(proofFile);
 
             if (includeRowIds) {
+                const leaves = tree.getLeaves();
+                const proof = tree.proofs[0];
                 const rowProofTmpDir = tmp.dirSync().name;
-                await module.exports.genRowProofs(proofId, rowProofTmpDir, verbose);
+                for (let li = 0; li < leaves.length; li += 1) {
+                    const {key, value} = leaves[li];
+                    const fileKey = module.exports.safeRowId(key);
+                    const rowproof = tree.addPathToProof(proof, key, 'pdb_row_branch');
+                    // TODO: Include the data in the proof.
+                    await fs.writeFileSync(rowProofTmpDir + '/' + fileKey + '.proof', rowproof);
+                }
                 await zipFile.addLocalFolder(rowProofTmpDir, 'rowProofs');
             }
 
@@ -1185,6 +1191,15 @@ module.exports = {
             log.error(error.message, ' while reproofving rowids for proof');
             throw (error);
         }
+    },
+    safeRowId: (rowId) => {
+        let returnRowId = rowId;
+        if (rowId.match('/')) {
+            log.warn(`RowID ${rowId} contains forward slash "/" `);
+            returnRowId = rowId.replace(/\//g, '-');
+            log.warn('RowId will be represented in files as ', returnRowId);
+        }
+        return (returnRowId);
     },
     genRowProofs: async (proofId, tmpDir, verbose) => {
         // TODO: Use cursors everywhere

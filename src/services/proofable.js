@@ -29,6 +29,7 @@ const {
     anchor
 } = require('provendb-sdk-node');
 
+const debug=false;
 
 let proofableClient;
 
@@ -78,7 +79,10 @@ module.exports = {
 
             const keyValues = [];
             Object.keys(data.keyValues).sort().forEach((key) => {
-                keyValues.push({ key, value: Buffer.from(data.keyValues[key]) });
+                keyValues.push({
+                    key,
+                    value: Buffer.from(data.keyValues[key])
+                });
             });
             builder.addBatch(keyValues);
             const tree = builder.build();
@@ -89,9 +93,11 @@ module.exports = {
                 anchor.submitProofWithAwaitConfirmed(true));
 
             tree.addProof(anchoredProof);
-            console.log('=======');
-            console.log(tree);
-            console.log('=======');
+            if (debug) {
+                console.log('=======');
+                console.log(tree);
+                console.log('=======');
+            }
             log.info('Anchored to ', anchoredProof.metadata.txnUri);
             return (tree);
         } catch (error) {

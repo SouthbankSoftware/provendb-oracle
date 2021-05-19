@@ -86,7 +86,7 @@ class AnchorCommand extends Command {
                     );
                     log.info(`Proof ${proofId} created and stored to DB`);
                     if (flags.validate) {
-                        await createProofFile(treeWithProof.getTrieId(), outputFile, includeRowIds, verbose);
+                        await createProofFile(treeWithProof, outputFile, includeRowIds, verbose);
                         log.info('Proof written to ', outputFile);
                     }
                 }
