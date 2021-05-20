@@ -20,7 +20,7 @@
  * @Author: Guy Harrison
  */
 
-
+// TODO: Encrypt password in config file
 
 const fs = require('fs');
 const log = require('simple-node-logger').createSimpleLogger();
