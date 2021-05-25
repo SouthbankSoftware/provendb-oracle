@@ -11,7 +11,7 @@ const {
 
 const parameters = getParameters();
 const demoSchema = parameters.config.oracleConnection.user.toUpperCase() + 'DEMO';
-const demoPassword='myLong_Password_23';
+const demoPassword = 'myLong_Password_23';
 
 
 
@@ -34,9 +34,12 @@ describe('provendb-oracle Monitor tests', () => {
     });
     test('Test monitor', async () => {
         jest.setTimeout(120000);
-        let monitorCmd = `monitor --config=testConfig.yaml -i 20 -m 40 --tables=${demoSchema}.CONTRACTSTABLE ${demoSchema}.CONTRACTSTABLEFBDA`;
+        const monitorCmd = `monitor --config=testConfig.yaml -i 20 -m 40 --tables=${demoSchema}.CONTRACTSTABLE ${demoSchema}.CONTRACTSTABLEFBDA`;
         const output = await provendbOracle(monitorCmd);
-        expect(output).toEqual(expect.stringMatching('Anchoring proof: CONFIRMED'));
+        expect(output).toEqual(expect.stringMatching('Anchoring data to HEDERA'));
+        expect(output).toEqual(expect.stringMatching('Anchored to https'));
+        expect(output).toEqual(expect.stringMatching('Sleeping for 20 seconds'));
+        expect(output).toEqual(expect.stringMatching('100 keys'));
         expect(output).not.toEqual(expect.stringMatching('ERROR'));
     });
 });

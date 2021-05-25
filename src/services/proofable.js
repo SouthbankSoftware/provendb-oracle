@@ -29,7 +29,7 @@ const {
     anchor
 } = require('provendb-sdk-node');
 
-const debug=false;
+const debug = false;
 
 let proofableClient;
 
@@ -75,7 +75,9 @@ module.exports = {
             log.info('--> Anchoring data to ', anchorChainType);
             log.info(Object.keys(data.keyValues).length, ' keys');
             const builder = new merkle.Builder('sha-256');
-            const myAnchor = anchor.connect(anchor.withAddress('localhost:10008'), anchor.withInsecure(true));
+            // TODO: Use dev anchor optionally not local anchor
+            // const myAnchor = anchor.connect(anchor.withAddress('localhost:10008'), anchor.withInsecure(true));
+            const myAnchor = anchor.connect(anchor.withAddress('anchor.dev.proofable.io:443'));
 
             const keyValues = [];
             Object.keys(data.keyValues).sort().forEach((key) => {
@@ -86,13 +88,14 @@ module.exports = {
             });
             builder.addBatch(keyValues);
             const tree = builder.build();
-            console.log(Object.keys(tree));
+
 
             const anchoredProof = await myAnchor.submitProof(tree.getRoot(),
                 anchor.submitProofWithAnchorType(anchor.Anchor.Type[anchorChainType]),
                 anchor.submitProofWithAwaitConfirmed(true));
 
             tree.addProof(anchoredProof);
+            log.trace('tree', tree);
             if (debug) {
                 console.log('=======');
                 console.log(tree);
@@ -144,49 +147,29 @@ module.exports = {
         }
         return proofableClient;
     },
-
-    // Validate/Create a row proof for a specific row using a pre-existing trie
-    // TODO: Ask Guan to give me a way of generating these in batches
-    generateRowProof: async (rowData, trie, proofId, proofFile, dotFile, verbose = false) => {
+    parseProof: (textProof, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
-        const proofableKey = proofable.Key.from(rowData.key.toString());
-        const proofableKeyValuesFilter = proofable.KeyValuesFilter.from([proofableKey]);
-        const dataValues = {};
-        dataValues[rowData.key] = rowData.hash;
-        const sortedValues = await proofable.sortKeyValues(proofable.dataToKeyValues(dataValues));
-
-        log.trace('creating key values proof');
-        log.trace(
-            'args ',
-            trie.getId(),
-            ' , ',
-            proofId,
-            ' , ',
-            proofableKeyValuesFilter,
-            ' , ',
-            proofFile,
-        );
+        const proof = JSON.parse(textProof);
+        const parsedProof = merkle.importTree({ algorithm: proof.algorithm, data: proof.layers, proofs: proof.proofs });
+        log.trace('parsed Proof leaves ', parsedProof.getLeaves());
+        return (parsedProof);
+    },
+    // Validate/Create a row proof for a specific row using a pre-existing trie
+    // TODO: Ask Guan to give me a way of generating these in batches
+    generateRowProof: async (proof, rowId, verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
         try {
-            // TODO: Ask Guan to return dot file
-            await proofableClient.createKeyValuesProof(
-                trie.getId(),
-                proofId,
-                proofableKeyValuesFilter,
-                proofFile,
-            );
+            log.trace('adding ', rowId, ' to proof ', proof);
+            const rowProof = proof.addPathToProof(proof.proofs[0], rowId, 'rowid_branch');
+            log.trace('rowProof ', rowProof);
+            return rowProof;
         } catch (error) {
+            log.error(error.message, ' while geneating row proof');
             log.error(error.stack);
         }
-
-        log.trace('verifying proof to ', proofFile, ' ', dotFile);
-        const docProof = await proofableClient.verifyKeyValuesProofWithSortedKeyValues(
-            proofFile,
-            sortedValues,
-            dotFile,
-        );
-        log.trace(docProof);
-        return docProof;
-    },
+    }
 };

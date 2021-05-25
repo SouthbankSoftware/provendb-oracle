@@ -27,16 +27,16 @@ class HistoryCommand extends Command {
             } = this.parse(HistoryCommand);
 
             const {
-                rowid,
+                rowId,
                 tables,
                 where,
                 verbose
             } = flags;
 
-            if (!tables && !rowid) {
+            if (!tables && !rowId) {
                 throw new Error('Must specify either rowid or tables argument, try --help');
             }
-            if (tables && rowid) {
+            if (tables && rowId) {
                 throw new Error('Must specify only one of rowid or tables argument, try --help');
             }
 
@@ -54,14 +54,15 @@ class HistoryCommand extends Command {
             await connectToOracle(config, verbose);
 
             // Command Specific Logic:
-            if (rowid) {
-                await listEntries(rowid);
+            if (rowId) {
+                await listEntries(rowId);
             }
             if (tables) {
               await listTableEntries(tables, where);
             }
         } catch (error) {
             log.error('Failed to fetch history');
+            console.log(error.trace);
             log.error(error.message);
         }
     }
@@ -73,7 +74,7 @@ Show the rowids and optionally SCNs for which we have anchored proofs
 `;
 
 HistoryCommand.flags = {
-    rowid: flags.string({
+    rowId: flags.string({
         string: 'r',
         description: 'row ID to fetch versions for',
         required: false,

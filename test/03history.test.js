@@ -4,6 +4,7 @@
  * */
 /* eslint unicorn/filename-case:off */
 
+
 const {
     provendbOracle, getParameters
 } = require('./testCommon');
@@ -50,10 +51,11 @@ describe('provendb-oracle History tests', () => {
         expect(lines.length > 5).toBeTruthy();
 
         const lastLine = lines[lines.length - 2];
-        // expect(lastLine).toEqual(expect.stringMatching('Rowid'));
-        const rowid = lastLine.match(/^(\S*)(.*)/)[1];
-        expect(rowid.length).toEqual(18);
-        output = await provendbOracle(`history --config=testConfig.yaml --rowid=${rowid}`);
+        // console.log(lastLine);
+        const rowid = lastLine.match(/^(\s*)(\S*)(\s*)/)[2];
+        // console.log(rowid);
+        expect(rowid.length).toEqual(18); 
+        output = await provendbOracle(`history --config=testConfig.yaml --rowId=${rowid}`);
         expect(output).toEqual(expect.stringMatching('Rowid'));
         expect(output).toEqual(expect.stringMatching(rowid));
         expect(output).not.toEqual(expect.stringMatching('ERROR'));
@@ -61,4 +63,4 @@ describe('provendb-oracle History tests', () => {
     });
 });
 
- 
+

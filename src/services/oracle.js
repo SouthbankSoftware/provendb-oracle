@@ -40,7 +40,7 @@ const {
 const {
     anchorData,
     getProofableClient,
-    parseproof,
+    parseProof,
     generateRowProof,
     validateData
 } = require('./proofable');
@@ -433,7 +433,9 @@ module.exports = {
         log.trace(jsonRow);
 
         const key = rowidKey;
+        log.trace('Data to be hashed ', row);
         const hash = crypto.createHash('sha256').update(stringify(row)).digest('base64');
+        log.trace('hash ', hash);
         return {
             key,
             hash,
@@ -496,6 +498,7 @@ module.exports = {
                     data = row.slice(0, row.length - 3);
                     keyTimeStamps[key] = versionStartTime;
                 }
+                log.trace('data to be hashed:', data);
                 const hash = crypto.createHash('sha256').update(stringify(data)).digest('base64');
                 keyValues[key] = hash;
 
@@ -706,11 +709,13 @@ module.exports = {
     },
 
     // List known versions of a specific Rowid
-    listEnproofs: async (rowid) => {
+    listEntries: async (rowid, header = true) => {
         try {
-            const format = '%-18s %-22s %-26s %-24s %-24s';
-            console.log('\n');
-            console.log(sprintf(format, 'Rowid', 'Proof', 'key', 'startDate', 'endDate'));
+            const format = '%-18s %-50s\n\t %-26s %-24s %-24s';
+            if (header) {
+                console.log('\n');
+                console.log(sprintf(format, 'Rowid', 'Proof', 'key', 'startDate', 'endDate'));
+            }
             const rowidPattern = `${rowid}.%`;
             const sqlText = `
                 SELECT rowid_scn,proofid,start_time,end_time 
@@ -720,11 +725,18 @@ module.exports = {
                 ORDER BY start_time 
   `;
             const result = await oraConnection.execute(sqlText, [rowidPattern, rowid]);
+            const shortProofs = {};
             if (result.rows.length === 0) {
                 log.error(`No proofs for ${rowid}`);
             } else {
                 result.rows.forEach((row) => {
-                    console.log(sprintf(format, rowid, row[1], row[0], row[2].toISOString(), row[3].toISOString()));
+                    const key = row[0];
+                    const proofId = row[1];
+                    const shortProofId = module.exports.shortProofId(proofId);
+                    shortProofs[proofId] = shortProofId;
+                    const startDate = row[2];
+                    const endDate = row[3];
+                    console.log(sprintf(format, rowid, proofId, key, startDate.toISOString(), endDate.toISOString()));
                 });
             }
         } catch (error) {
@@ -916,7 +928,7 @@ module.exports = {
         };
     },
 
-    listTableEnproofs: async (tables, where) => {
+    listTableEntries: async (tables, where) => {
         for (let ti = 0; ti < tables.length; ti++) {
             const tableName = tables[ti];
 
@@ -935,18 +947,20 @@ module.exports = {
             console.log('Table: ', tableName);
             const divider = '-------' + '-'.repeat(tableName.length + 1);
             console.log(divider);
-            const format = '%-18s %-22s %-26s %-24s %-24s';
+            const format = '%-18s %-60s\n\t %-26s %-24s %-24s';
             console.log(sprintf(format, 'Rowid', 'Proof', 'key', 'startDate', 'endDate'));
             let row = await results.resultSet.getRow();
             while (row) {
                 const rowId = row[0];
-                await module.exports.listEnproofs(rowId);
+                await module.exports.listEntries(rowId, false);
                 row = await results.resultSet.getRow();
             }
             await results.resultSet.close();
         }
     },
-
+    shortProofId: (proofId) => {
+        return (proofId.substr(1, 8) + '....' + proofId.substr(proofId.length - 8));
+    },
     getSCN: async () => {
         const SQLText = `
             SELECT CURRENT_SCN,flashback_on
@@ -1003,7 +1017,10 @@ module.exports = {
     },
     // TODO: Examples should include a FBDA managed table
     // Get proof for a specific rowidStarttime key
-    getproofForRowid: async (rowidScn) => {
+    getproofForRowid: async (rowidScn, verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
         const result = await oraConnection.execute(
             `
                 SELECT proofid,
@@ -1017,6 +1034,7 @@ module.exports = {
             `,
             [rowidScn],
         );
+        log.trace(result);
         if (result.rows.length === 0) {
             throw new Error('No such rowid.startTime - check provendbcontrolsRowids table');
         }
@@ -1025,7 +1043,7 @@ module.exports = {
         const tableOwner = result.rows[0][1];
         const tableName = result.rows[0][2];
         log.trace(`identifier ${rowidScn} is found in proof ${proofId}`);
-        const proof = await module.exports.getproofFromDB(proofId);
+        const proof = await module.exports.getproofFromDB(proofId, verbose);
         return {
             proof,
             tableOwner,
@@ -1046,6 +1064,7 @@ module.exports = {
             },
         };
         try {
+            oracledb.fetchAsString = [oracledb.CLOB];
             const data = await oraConnection.execute(
                 `
                 SELECT proof, owner_name, table_name,
@@ -1056,21 +1075,24 @@ module.exports = {
                 [proofId],
                 options,
             );
+
             if (data.rows.length === 0) {
-                log.error('Internal error reproofving proof ', proofId);
+                log.error('Internal error validating proof ', proofId);
             }
 
-            const proofDataOut = data.rows[0][0];
+            const textProof=data.rows[0][0];
+            const proof=parseProof(textProof);
             const tableOwner = data.rows[0][1];
             const tableName = data.rows[0][2];
             const startTime = data.rows[0][3];
             const endTime = data.rows[0][4];
-            log.trace('Reproofved proof ', proofId, ' for ', tableOwner, '.', tableName);
+            log.trace('Retrieved proof ', proofId, ' for ', tableOwner, '.', tableName);
             log.trace(' Data range ', startTime, ' to ', endTime);
-            const proof = await parseproof(proofDataOut);
+            log.trace(typeof proof);
+            log.trace('proof', proof);
             return proof;
         } catch (error) {
-            log.error(error.message, ' while reproofving proof from db');
+            log.error(error.message, ' while retrieving proof from db');
         }
     },
     // Validate a rowid/timstamp key
@@ -1082,15 +1104,15 @@ module.exports = {
             }
             const tmpDir = tmp.dirSync().name;
             let fileRowidKey = rowidKey;
+            const rowId = rowidKey;
             if (rowidKey.match('/')) {
                 log.warn(`RowID ${rowidKey} contains forward slash "/" `);
                 fileRowidKey = rowidKey.replace(/\//g, '-');
                 log.warn('RowId will be represented in files as ', fileRowidKey);
             }
             const proofFile = `${tmpDir}/${fileRowidKey}.proof`;
-            const dotFile = `${tmpDir}/${fileRowidKey}.dot`;
             const jsonFile = `${tmpDir}/${fileRowidKey}.json`;
-            log.trace('temp dir and files ', tmpDir, ' ', proofFile, ' ', dotFile, ' ', jsonFile);
+            log.trace('temp dir and files ', tmpDir, ' ', proofFile, ' ', jsonFile);
 
             let dataRowidKey;
             let proofRowIdKey;
@@ -1105,36 +1127,42 @@ module.exports = {
             } else {
                 dataRowidKey = rowidKey;
                 proofRowIdKey = rowidKey;
+                rowid = splitRowId[0];
             }
 
             log.trace('Data Rowid Key ', dataRowidKey);
             log.trace('proof Rowid Key ', proofRowIdKey);
 
-            // Retrive the proof and proof for this key
+            // Retrive the proof  for this key
             const {
                 proof,
                 tableOwner,
                 tableName
-            } = await module.exports.getproofForRowid(proofRowIdKey);
-            const proofableClient = await getProofableClient();
-            const proofId = (await proofableClient.getproofProof(proof.getId())).getId();
+            } = await module.exports.getproofForRowid(proofRowIdKey, verbose);
+            log.trace('proof ', proof);
+
 
             // Get the current state of data
             const rowData = await module.exports.getRowData(tableOwner, tableName, dataRowidKey, verbose);
 
             log.trace('key/value for rowProof ', rowData);
+            const proofHash = crypto.createHash('sha256').update(rowData.hash).digest('hex');
+            // TODO: this two level hashing process might be confusing
+
+            const treeLeafValue = rowId + ':' + proofHash;
+            log.trace('proof ', proof);
+
+            if (!proof.layers[0].includes(treeLeafValue)) {
+                throw Error(`Hash mismatch for ${rowId} - rowid key ${treeLeafValue} not found`);
+            } else {
+                log.info(`SUCCESS: Rowid hash value confirmed as ${treeLeafValue}`);
+            }
+            const rowProof = await generateRowProof(proof, rowId, verbose);
+
             // Change rowData key to match proof key
             // (eg, make the rowid.scn number the same as is in the proof)
             rowData.key = proofRowIdKey;
 
-            // generate a rowProof based on the proof and current data
-
-            const rowProof = await generateRowProof(rowData, proof, proofId, proofFile, dotFile, verbose);
-            if (rowProof.keyValues.total === rowProof.keyValues.passed && rowProof.keyValues.passed === 1) {
-                if ((!silent) || verbose) log.info('Rowid validation passed ', rowProof.keyValues);
-            } else {
-                log.error('Rowid Validate FAILED! ', rowProof.keyValues);
-            }
             const jsonData = JSON.stringify({
                 rowData,
                 rowProof
@@ -1149,6 +1177,7 @@ module.exports = {
             return rowProof;
         } catch (error) {
             log.error(error.message, ' while validating rowId ', rowidKey);
+            throw error;
         }
     },
     // TODO: Use --unhandled-rejections=strict
@@ -1175,7 +1204,10 @@ module.exports = {
                 const proof = tree.proofs[0];
                 const rowProofTmpDir = tmp.dirSync().name;
                 for (let li = 0; li < leaves.length; li += 1) {
-                    const {key, value} = leaves[li];
+                    const {
+                        key,
+                        value
+                    } = leaves[li];
                     const fileKey = module.exports.safeRowId(key);
                     const rowproof = tree.addPathToProof(proof, key, 'pdb_row_branch');
                     // TODO: Include the data in the proof.
@@ -1188,7 +1220,7 @@ module.exports = {
             log.info(`Wrote proof file to ${outputFile}`);
             // TODO: Add a README to the zip
         } catch (error) {
-            log.error(error.message, ' while reproofving rowids for proof');
+            log.error(error.message, ' while retrieving rowids for proof');
             throw (error);
         }
     },
@@ -1227,7 +1259,7 @@ module.exports = {
                     await module.exports.validateRow(rowIdScn, outFile, verbose, true);
                     process.stdout.write('.');
                 } catch (error) {
-                    log.error(error.message, ` while reproofving rowid ${rowIdScn} for proof`);
+                    log.error(error.message, ` while retrieving rowid ${rowIdScn} for proof`);
                     console.log(error);
                     throw (error);
                 }
@@ -1243,7 +1275,7 @@ module.exports = {
             log.setLevel('trace');
         }
         try {
-            log.trace('Reproofving proof details for ', proofId);
+            log.trace('Retrieving proof details for ', proofId);
             const {
                 tableDef,
                 prooftype,
