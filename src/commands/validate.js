@@ -65,7 +65,7 @@ class ValidateCommand extends Command {
 
             // Establish connection:
             await connectToOracle(config, verbose);
-            await connectToProofable(config, verbose);
+            // await connectToProofable(config, verbose);
 
             // Command Specific Logic:
 
