@@ -1,0 +1,82 @@
+{
+    "rowData": {
+        "key": "AAAR5mAAMAAAAlcAAA",
+        "hash": "8lIEI447moaNydIzb5KSIufHJQL9PYwktwcs6wF7mQs=",
+        "jsonRow": [{
+            "ROW_ROWID": "AAAR5mAAMAAAAlcAAA",
+            "CONTRACTID": 1,
+            "METADATA": "{\"name\":\"A Name\",\"Date\":\"A Date\"}",
+            "CONTRACTDATA": "jdfksljfdskfsdioweljdslfsdjlewowefsdfjl",
+            "MYTIMESTAMP": "2021-05-25T13:20:36.000Z"
+        }],
+        "rawData": ["AAAR5mAAMAAAAlcAAA", 1, "{\"name\":\"A Name\",\"Date\":\"A Date\"}", "jdfksljfdskfsdioweljdslfsdjlewowefsdfjl", "2021-05-25T13:20:36.000Z"]
+    },
+    "rowProof": {
+        "id": "e42675976e27cde0159ed730aba25c9a0b51ed805045e2769a0ff4ea302565bd:ArcNPOpCwFDNDwdIxhppU",
+        "anchorType": "ETH",
+        "batchId": "ArcNPOpCwFDNDwdIxhppU",
+        "status": "CONFIRMED",
+        "hash": "534d526d0a5ea98b2c2e99d8bd9db182b3740cd02d1deb3956dff4e430e448fa",
+        "format": "CHP_PATH",
+        "metadata": {
+            "txnId": "61837fe0ba627278456748bd872ca73321810e2afbb79af30c7e7eec35eba3b6",
+            "txnUri": "https://rinkeby.etherscan.io/tx/0x61837fe0ba627278456748bd872ca73321810e2afbb79af30c7e7eec35eba3b6",
+            "blockTime": 1621986039,
+            "blockNumber": 8650023,
+            "endpoint": "https://rinkeby.infura.io/v3/ba25a62205f24e5bb74d4f9738910a83",
+            "gasUsed": 21512,
+            "gasPrice": 1000000000
+        },
+        "data": {
+            "@context": "https://w3id.org/chainpoint/v3",
+            "type": "Chainpoint",
+            "hash": "534d526d0a5ea98b2c2e99d8bd9db182b3740cd02d1deb3956dff4e430e448fa",
+            "hash_id_node": "da023c5c-c895-11e9-a32f-2a2ae2dbcce4",
+            "hash_submitted_node_at": "2021-05-25T23:40:35Z",
+            "hash_id_core": "da023c5c-c895-11e9-a32f-2a2ae2dbcce4",
+            "hash_submitted_core_at": "2021-05-25T23:40:35Z",
+            "branches": [{
+                "label": "rowid_branch",
+                "ops": [{
+                    "r": "643c743f01a136d830d8322481fd06598f7b4087b851115ac0ed3260134b7e91"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "r": "19b7d21230b1d279a1facff847a030831196d30a431460c3a7aaa0e7ee4a088a"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "l": "c3b20538c24da6f8210877b8fbba867c231cd03d95adbbf795d076f1fa727d39"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "l": "88799246a41da6c63923918d90b04254461cd0bb02614d351ba34983a3206fea"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "r": "a60d1f97c4f3489c15d6d21f9b347976ce4c90fbee977628dbcdd74af5a9dfb2"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "r": "aec066bd8d507ff380e7073450e05dfe4cd366fc6fa608c7d13fd2f7e9f111e5"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "r": "01a7a7612b3d29de5162103dab7118893d27ce7a544ead6fceb14400cefb1be1"
+                }, {
+                    "op": "sha-256"
+                }],
+                "branches": [{
+                    "label": "pdb_eth_anchor_branch",
+                    "ops": [{
+                        "anchors": [{
+                            "type": "cal",
+                            "anchor_id": "61837fe0ba627278456748bd872ca73321810e2afbb79af30c7e7eec35eba3b6",
+                            "uris": ["http://anchor:11000/eth/61837fe0ba627278456748bd872ca73321810e2afbb79af30c7e7eec35eba3b6"]
+                        }]
+                    }]
+                }]
+            }]
+        }
+    }
+}
