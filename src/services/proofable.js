@@ -76,8 +76,8 @@ module.exports = {
             log.info(Object.keys(data.keyValues).length, ' keys');
             const builder = new merkle.Builder('sha-256');
             // TODO: Use dev anchor optionally not local anchor
-            // const myAnchor = anchor.connect(anchor.withAddress('localhost:10008'), anchor.withInsecure(true));
-            const myAnchor = anchor.connect(anchor.withAddress('anchor.dev.proofable.io:443'));
+            const myAnchor = anchor.connect(anchor.withAddress('localhost:10008'), anchor.withInsecure(true));
+            // const myAnchor = anchor.connect(anchor.withAddress('anchor.dev.proofable.io:443'));
 
             const keyValues = [];
             Object.keys(data.keyValues).sort().forEach((key) => {

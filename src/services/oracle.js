@@ -689,13 +689,13 @@ module.exports = {
                 startscn: startScn,
                 currentscn: currentScn,
             });
-            log.trace(result.rows.length, ' rows reproofved');
+            log.trace(result.rows.length, ' rows reprooved');
         } catch (error) {
             log.error(error.message);
             if (error.errorNum === 30052) {
                 // We don't have flashback data since the last monitored sample
                 log.error('Insufficient flashback history to capture all changes since last sample');
-                log.info('Attempting to reproofve current state');
+                log.info('Attempting to reproove current state');
                 sqlText = module.exports.firstTimeTableQuery(tableName);
                 result = await oraConnection.execute(sqlText, {
                     startscn: currentScn,
