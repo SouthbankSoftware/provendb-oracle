@@ -39,7 +39,8 @@ const {
 } = require('sprintf-js');
 const {
     anchorData,
-    getProofableClient,
+    validateBlockchainHash,
+    validateProof,
     parseProof,
     generateRowProof,
     validateData
@@ -1080,8 +1081,8 @@ module.exports = {
                 log.error('Internal error validating proof ', proofId);
             }
 
-            const textProof=data.rows[0][0];
-            const proof=parseProof(textProof);
+            const textProof = data.rows[0][0];
+            const proof = parseProof(textProof);
             const tableOwner = data.rows[0][1];
             const tableName = data.rows[0][2];
             const startTime = data.rows[0][3];
@@ -1145,6 +1146,8 @@ module.exports = {
             // Get the current state of data
             const rowData = await module.exports.getRowData(tableOwner, tableName, dataRowidKey, verbose);
 
+
+
             log.trace('key/value for rowProof ', rowData);
             const proofHash = crypto.createHash('sha256').update(rowData.hash).digest('hex');
             // TODO: this two level hashing process might be confusing
@@ -1153,11 +1156,22 @@ module.exports = {
             log.trace('proof ', proof);
 
             if (!proof.layers[0].includes(treeLeafValue)) {
-                throw Error(`Hash mismatch for ${rowId} - rowid key ${treeLeafValue} not found`);
+                log.error(`Hash mismatch for ${rowId} - rowid key ${treeLeafValue} not found`);
             } else {
-                log.info(`SUCCESS: Rowid hash value confirmed as ${treeLeafValue}`);
+                log.info(`PASS: Rowid hash value confirmed as ${treeLeafValue}`);
             }
             const rowProof = await generateRowProof(proof, rowId, verbose);
+            log.trace(rowProof);
+            const validatedProof = await validateProof(rowProof, verbose);
+            log.trace('validatedProof ', validatedProof);
+            log.trace('Expected value for blockchain transaction is ', validatedProof.expectedValue);
+            if (await validateBlockchainHash(rowProof.anchorType, rowProof.metadata.txnId, validatedProof.expectedValue, verbose)) {
+                log.info('PASS: Proof validated with hash ', validatedProof.expectedValue, ' on ', rowProof.metadata.txnUri);
+            }
+            else {
+                log.error('FAIL: Cannot validate blockchain hash');
+            }
+
 
             // Change rowData key to match proof key
             // (eg, make the rowid.scn number the same as is in the proof)

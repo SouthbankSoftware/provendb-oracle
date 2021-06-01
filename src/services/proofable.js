@@ -23,7 +23,10 @@
 const fs = require('fs');
 const log = require('simple-node-logger').createSimpleLogger();
 const proofable = require('proofable');
+const chainpointParse = require('chainpoint-parse');
+const chainpointBinary = require('chainpoint-binary');
 const tmp = require('tmp');
+const axios = require('axios');
 const {
     merkle,
     anchor
@@ -46,6 +49,52 @@ module.exports = {
         await this.connectToProofable(config);
         return proofableClient;
     },
+    validateBlockchainHash: async (anchorType, txnId, expectedValue, verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        let hashOut;
+        if (anchorType === 'ETH') {
+            hashOut = await module.exports.lookupEthTxn(txnId, verbose = false);
+            log.trace('txnOut ', hashOut);
+        } else {
+            log.warn(`Do not know how to validate ${anchorType} blockchain entries`);
+            return (true);
+        }
+        log.info(`${anchorType} transacdtion ${txnId} has hash value ${hashOut}`);
+        if (expectedValue === hashOut) {
+            log.info('PASS: blockchain hash matches proof hash');
+            return (true);
+        }
+            log.info('FAIL: blockchain hash does not match expected hash from proof');
+            return (false);
+    },
+    lookupEthTxn: async (transactionId, verbose) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        const apiKey = 'XV98BFQPFGWMDKHWH6NSQ1VM74S3ABTKZS';
+        const txRest = 'https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHas'
+          + 'h&txhash=' + transactionId + '&apikey=' + apiKey;
+          try {
+            const config = {
+                method: 'get',
+                url: txRest,
+                headers: {
+                }
+            };
+            const response = await axios(config);
+            let result = response.data.result.input;
+            const match0x = result.match(/0x(.*)/);
+            if (match0x.length > 1) {
+                result = match0x[1];
+            }
+
+            return (result);
+        } catch (error) {
+            throw new Error(error);
+        }
+      },
     // Validate data against an existing trie
     validateData: async (trie, keyvalues, outputFile, verbose) => {
         if (verbose) {
@@ -152,12 +201,66 @@ module.exports = {
             log.setLevel('trace');
         }
         const proof = JSON.parse(textProof);
-        const parsedProof = merkle.importTree({ algorithm: proof.algorithm, data: proof.layers, proofs: proof.proofs });
+        const parsedProof = merkle.importTree({
+            algorithm: proof.algorithm,
+            data: proof.layers,
+            proofs: proof.proofs
+        });
         log.trace('parsed Proof leaves ', parsedProof.getLeaves());
         return (parsedProof);
     },
     // Validate/Create a row proof for a specific row using a pre-existing trie
     // TODO: Ask Guan to give me a way of generating these in batches
+    validateProof: async (proof, verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        const debug = false;
+        try {
+            const objectProof = JSON.parse(JSON.stringify(proof.data));
+
+            if (debug) console.log(JSON.stringify(objectProof));
+            log.trace('object proof', objectProof);
+            // Check that we can convert to chainpont Binary
+            const binaryProof = await chainpointBinary.objectToBinarySync(objectProof);
+            log.trace('binary proof', binaryProof);
+            if (debug) console.log(binaryProof);
+
+            // Parse the proof using chainpoint libraries
+            const parsedProof = chainpointParse.parse(binaryProof);
+            log.trace('parsed Proof', parsedProof);
+            if (debug) console.log(JSON.stringify(parsedProof));
+            // Get the expected value  (this may need recursion)
+            /* let branches=parsedProof.branches;
+            let evDone=false;
+            let expected_value;
+            while(!evDone) {
+                for (let bi=0;bi<branches.length;bi++) {
+                    let branch=branches[bi];
+                    if ('anchors' in branch) {
+                        for (let ai=0;ai<branch.anchors.length;ai++) {
+                            let anchor=branch.anchors[ai];
+                            if ('expected_value' in anchor) {
+                                expected_value=anchor.expected_value;
+                                evDone=true;
+                                break;
+                            }
+                        }
+                        if ('branches' in branch) {
+                            branches=branch.branches;
+                        }
+                }
+            } */
+            const expectedValue = parsedProof.branches[0].branches[0].anchors[0].expected_value;
+            log.trace('expectedValue ', expectedValue);
+            return ({expectedValue, parsedProof});
+        } catch (error) {
+            log.error(error.message, ' while validating proof');
+            log.error(error.stack);
+            throw error;
+        }
+    },
+
     generateRowProof: async (proof, rowId, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
