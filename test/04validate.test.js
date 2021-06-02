@@ -4,6 +4,7 @@
  * */
 
 
+
 const oracledb = require('oracledb');
 const {
     provendbOracle, getParameters
@@ -31,6 +32,29 @@ describe('provendb-oracle Anchor tests', () => {
     test('Test help', async () => {
         const output = await provendbOracle('validate --help');
         expect(output).toEqual(expect.stringMatching('Validate Oracle data against a blockchain proof'));
+    });
+
+    test('Validate a simple ROWID', async () => {
+        jest.setTimeout(120000);
+        const output = await provendbOracle(`history --config=testConfig.yaml --tables=${demoSchema}.CONTRACTSTABLE`);
+        
+        expect(output).toEqual(expect.stringMatching(`Table:  ${demoSchema}.CONTRACTSTABLE`));
+        expect(output).toEqual(expect.stringMatching('Rowid'));
+        const lines = output.toString().split(/(?:\r\n|\r|\n)/g);
+ 
+        let rowId;
+        const lastLine = lines[lines.length-2];
+        console.log(lastLine);
+        const rowIdMatch = lastLine.match(/(\S+)(.*)/);
+        if (rowIdMatch && rowIdMatch.length > 1) {
+            rowId = rowIdMatch[1];
+        } else {
+            expect('Cannot find Rowid In output').to.equal(false);
+        }
+
+        const vOutput = await provendbOracle(`validate --config=testConfig.yaml --rowId=${rowId}`);
+        expect(vOutput).toEqual(expect.stringMatching('PASS: Rowid hash value confirmed as'));
+        expect(vOutput).not.toEqual(expect.stringMatching('ERROR'));
     });
 
     test('Validate a rowid SCN', async () => {

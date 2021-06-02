@@ -230,28 +230,8 @@ module.exports = {
             const parsedProof = chainpointParse.parse(binaryProof);
             log.trace('parsed Proof', parsedProof);
             if (debug) console.log(JSON.stringify(parsedProof));
-            // Get the expected value  (this may need recursion)
-            /* let branches=parsedProof.branches;
-            let evDone=false;
-            let expected_value;
-            while(!evDone) {
-                for (let bi=0;bi<branches.length;bi++) {
-                    let branch=branches[bi];
-                    if ('anchors' in branch) {
-                        for (let ai=0;ai<branch.anchors.length;ai++) {
-                            let anchor=branch.anchors[ai];
-                            if ('expected_value' in anchor) {
-                                expected_value=anchor.expected_value;
-                                evDone=true;
-                                break;
-                            }
-                        }
-                        if ('branches' in branch) {
-                            branches=branch.branches;
-                        }
-                }
-            } */
-            const expectedValue = parsedProof.branches[0].branches[0].anchors[0].expected_value;
+            // const expectedValue = parsedProof.branches[0].branches[0].anchors[0].expected_value;
+            const expectedValue = findVal(parsedProof, 'expected_value');
             log.trace('expectedValue ', expectedValue);
             return ({expectedValue, parsedProof});
         } catch (error) {
@@ -276,3 +256,18 @@ module.exports = {
         }
     }
 };
+
+function findVal(object, key) {
+    let value;
+    Object.keys(object).some((k) => {
+        if (k === key) {
+            value = object[k];
+            return true;
+        }
+        if (object[k] && typeof object[k] === 'object') {
+            value = findVal(object[k], key);
+            return value !== undefined;
+        }
+    });
+    return value;
+}
