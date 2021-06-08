@@ -39,49 +39,42 @@ let proofableClient;
 
 module.exports = {
     // Directly access the proofable client for functions using proofable APIs that fall under the Oracle umbrella.
-    getProofableClient: async (config, verbose = false) => {
-        if (verbose) {
-            log.setLevel('trace');
-        }
-        if (proofableClient) {
-            return proofableClient;
-        }
-        await this.connectToProofable(config);
-        return proofableClient;
-    },
     validateBlockchainHash: async (anchorType, txnId, expectedValue, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
         let hashOut;
+        // TODO: mainnet anchor support
         if (anchorType === 'ETH') {
             hashOut = await module.exports.lookupEthTxn(txnId, verbose = false);
+            log.trace('txnOut ', hashOut);
+        } else if (anchorType === 'HEDERA') {
+            hashOut = await module.exports.lookupHederaTxn(txnId, verbose = false);
             log.trace('txnOut ', hashOut);
         } else {
             log.warn(`Do not know how to validate ${anchorType} blockchain entries`);
             return (true);
         }
-        log.info(`${anchorType} transacdtion ${txnId} has hash value ${hashOut}`);
+        log.info(`${anchorType} transaction ${txnId} has hash value ${hashOut}`);
         if (expectedValue === hashOut) {
             log.info('PASS: blockchain hash matches proof hash');
             return (true);
         }
-            log.info('FAIL: blockchain hash does not match expected hash from proof');
-            return (false);
+        log.info('FAIL: blockchain hash does not match expected hash from proof');
+        return (false);
     },
     lookupEthTxn: async (transactionId, verbose) => {
         if (verbose) {
             log.setLevel('trace');
         }
         const apiKey = 'XV98BFQPFGWMDKHWH6NSQ1VM74S3ABTKZS';
-        const txRest = 'https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHas'
-          + 'h&txhash=' + transactionId + '&apikey=' + apiKey;
-          try {
+        const txRest = 'https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHas' +
+            'h&txhash=' + transactionId + '&apikey=' + apiKey;
+        try {
             const config = {
                 method: 'get',
                 url: txRest,
-                headers: {
-                }
+                headers: {}
             };
             const response = await axios(config);
             let result = response.data.result.input;
@@ -94,27 +87,52 @@ module.exports = {
         } catch (error) {
             throw new Error(error);
         }
-      },
-    // Validate data against an existing trie
-    validateData: async (trie, keyvalues, outputFile, verbose) => {
+    },
+    lookupHederaTxn: async (transactionId, verbose) => {
         if (verbose) {
             log.setLevel('trace');
         }
-        const newSortedData = await proofable.sortKeyValues(proofable.dataToKeyValues(
-            keyvalues
-        ));
-        const validatedProof = await proofableClient.verifyTrieWithSortedKeyValues(trie,
-            newSortedData);
-        if (validatedProof.keyValues.total !== validatedProof.keyValues.passed) {
-            log.error('Proof not validated!');
+        // Get a document out of the vault
+        const endPoint = 'https://api.testnet.kabuto.sh/v1/transaction/' + transactionId;
+        try {
+            const config = {
+                method: 'get',
+                url: endPoint
+            };
+            const response = await axios(config);
+            return (response.data.memo);
+        } catch (error) {
+            throw new Error(error);
+        }
+    },
+    // Validate data against an existing proof
+    validateData: async (proof, inputKeyValues, outputFile, verbose) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        let goodProof = false;
+        const builder = new merkle.Builder('sha-256');
+        const keyValues = [];
+        Object.keys(inputKeyValues).sort().forEach((key) => {
+            keyValues.push({
+                key,
+                value: Buffer.from(inputKeyValues[key])
+            });
+        });
+        builder.addBatch(keyValues);
+        const tree = builder.build();
+        const calculatedRoot = tree.getRoot();
+        const proofRoot = proof.proofs[0].hash;
+        if (calculatedRoot === proofRoot) {
+            log.info('PASS: data hash matches proof hash');
+            goodProof = true;
         } else {
-            log.info('All keys validated');
+            log.error(`FAIL: proof hash does not match data hash proof: ${proofRoot}, data: ${calculatedRoot}`);
+            goodProof = false;
         }
-        if (outputFile) {
-            fs.writeFileSync(outputFile, JSON.stringify(validatedProof));
-            log.trace('Proof written to ', outputFile);
-        }
-        return (validatedProof);
+        // TODO: Should compress this file
+        await fs.writeFileSync(outputFile, JSON.stringify(proof));
+        return (goodProof);
     },
     // TODO: Create a demo script for p4o
 
@@ -157,17 +175,6 @@ module.exports = {
             log.error(error.trace);
             throw new Error(error);
         }
-    },
-
-    // Take raw trie data and import it into a proper trie object
-    parseTrie: async (trieData) => {
-        const tmpFile = tmp.fileSync();
-        const trieFileName = tmpFile.name;
-        await fs.writeFileSync(trieFileName, trieData, {
-            encoding: 'base64',
-        });
-        const trie = await proofableClient.importTrie('', trieFileName);
-        return trie;
     },
     // TODO: Retry txn timed out errors on hedera
     connectToProofable: async (config) => {
@@ -217,7 +224,12 @@ module.exports = {
         }
         const debug = false;
         try {
-            const objectProof = JSON.parse(JSON.stringify(proof.data));
+            log.trace('proof in validateProof',proof);
+            let objectProof = proof.data;
+            // TODO: Not sure why this is neccessary but otherwise Chainpoint barfs on proof
+            if (true) {
+                objectProof = JSON.parse(JSON.stringify(proof.data));
+            }
 
             if (debug) console.log(JSON.stringify(objectProof));
             log.trace('object proof', objectProof);
@@ -233,7 +245,10 @@ module.exports = {
             // const expectedValue = parsedProof.branches[0].branches[0].anchors[0].expected_value;
             const expectedValue = findVal(parsedProof, 'expected_value');
             log.trace('expectedValue ', expectedValue);
-            return ({expectedValue, parsedProof});
+            return ({
+                expectedValue,
+                parsedProof
+            });
         } catch (error) {
             log.error(error.message, ' while validating proof');
             log.error(error.stack);

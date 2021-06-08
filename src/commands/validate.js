@@ -9,7 +9,7 @@ const tmp = require('tmp');
 const {
     connectToOracle,
     validateRow,
-    validateProof
+    validateOracleProof
 } = require('../services/oracle');
 const {
     connectToProofable
@@ -77,7 +77,7 @@ class ValidateCommand extends Command {
             }
             if (proofId) {
                 log.info(`Validating proofId: ${proofId}`);
-                await validateProof(proofId, outputFile, verbose);
+                await validateOracleProof(proofId, outputFile, verbose);
 
                 log.info('Proof written to ', outputFile);
             }

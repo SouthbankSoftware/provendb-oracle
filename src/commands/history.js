@@ -12,6 +12,7 @@ const {
     connectToOracle,
     listEntries,
     listTableEntries,
+    listProofs,
 } = require('../services/oracle');
 
 const {
@@ -30,10 +31,11 @@ class HistoryCommand extends Command {
                 rowId,
                 tables,
                 where,
-                verbose
+                verbose,
+                proofOnly
             } = flags;
 
-            if (!tables && !rowId) {
+            if (!tables && !rowId && !proofOnly) {
                 throw new Error('Must specify either rowid or tables argument, try --help');
             }
             if (tables && rowId) {
@@ -53,12 +55,16 @@ class HistoryCommand extends Command {
             // Establish connection:
             await connectToOracle(config, verbose);
 
+            if (proofOnly) {
+                await listProofs(tables);
+            } else {
             // Command Specific Logic:
-            if (rowId) {
-                await listEntries(rowId);
-            }
-            if (tables) {
-              await listTableEntries(tables, where);
+                if (rowId) {
+                    await listEntries(rowId);
+                }
+                if (tables) {
+                    await listTableEntries(tables, where);
+                }
             }
         } catch (error) {
             log.error('Failed to fetch history');
@@ -81,7 +87,13 @@ HistoryCommand.flags = {
     }),
     tables: flags.string({
         string: 't',
-        description: 'tablenames to search (username.tablename)',
+        description: 'tablenames to include (username.tablename)',
+        required: false,
+        multiple: true,
+    }),
+    proofOnly: flags.boolean({
+        string: 'p',
+        description: 'list Proofs only (noRowids)',
         required: false,
         multiple: true,
     }),

@@ -32,8 +32,6 @@ const AdmZip = require('adm-zip');
 
 const debug = false;
 
-
-
 const {
     sprintf
 } = require('sprintf-js');
@@ -403,31 +401,29 @@ module.exports = {
         if (verbose) {
             log.setLevel('trace');
         }
-        log.trace('Getting data for ', rowidKey);
-
-        const therowid = rowidKey.split('.')[0];
-        const scn = rowidKey.split('.')[1];
-        const tableOwnerName = `${tableOwner}.${tableName}`;
-        const sqlText = `
-        SELECT rowidtochar(c.rowid) AS row_rowid, c.*
-          FROM ${tableOwnerName} AS OF SCN :scn c
-         WHERE ROWID = :therowid`;
-
-        log.trace(sqlText);
+        let theRowId;
+        let scn;
         let result;
-        try {
-            result = await oraConnection.execute(sqlText, {
-                scn,
-                therowid,
-            });
-        } catch (error) {
-            if (error.errorNum === 8181) {
-                log.error(`Cannot get data for SCN ${scn} - insufficient flashback data`);
-                log.error('Consider implementing Flashback data archive or increase undo retention');
-            }
-            throw (error);
+        let useScn = false;
+
+        log.trace('Getting data for ', rowidKey);
+        const rowidScn = rowidKey.split('.');
+
+
+        if (rowidScn.length > 1) {
+            scn = rowidScn[1];
+            theRowId = rowidScn[0];
+            useScn = true;
+        } else {
+            theRowId = rowidKey;
         }
 
+        const tableOwnerName = `${tableOwner}.${tableName}`;
+        if (useScn) {
+            result = await getRowDataWithScn(tableOwnerName, scn, theRowId, verbose);
+        } else {
+            result = await getRowDataNoScn(tableOwnerName, theRowId, verbose);
+        }
         assert(result.rows.length === 1, 'Only one row returned for rowid_scn');
         const row = result.rows[0];
         const jsonRow = module.exports.ora2json(result);
@@ -597,7 +593,7 @@ module.exports = {
         let lastPurgeTime = new Date();
         if (fatData.rows.length > 0) {
             lastPurgeTime = new Date(fatData.rows[0][1]);
-            log.info('Flashback Archive last Purge Time ', lastPurgeTime);
+            log.trace('Flashback Archive last Purge Time ', lastPurgeTime);
         }
         const jsonData = module.exports.ora2json(fatData); // JSON version of data
         if (jsonData.length === 0) {
@@ -744,7 +740,33 @@ module.exports = {
             log.error(error.stack);
         }
     },
+    listProofs: async (tables) => {
+        try {
+            const format = 'Proof: %-90s %-10s\n\t %-40s %-24s %-20s';
+            console.log('\n');
+            console.log(sprintf(format, 'Proof', 'Type', 'Table', 'Where', 'proofDate'));
 
+            const sqlText = `
+            SELECT PROOFID, OWNER_NAME||'.'||TABLE_NAME table_name, start_time,  PROOFTYPE, WHERECLAUSE 
+              FROM PROVENDBCONTROL p`;
+            const result = await oraConnection.execute(sqlText);
+
+            if (result.rows.length === 0) {
+                log.error('No proofs found');
+            } else {
+                result.rows.forEach((row) => {
+                    const proofId = row[0];
+                    const table = row[1];
+                    const proofDate = row[2];
+                    const proofType = row[3];
+                    const whereClause = row[4];
+                    console.log(sprintf(format, proofId, proofType, table, whereClause, proofDate.toISOString()));
+                });
+            }
+        } catch (error) {
+            log.error(error.stack);
+        }
+    },
     // This is the query we use to get changes since the last sample
     registeredTableQuery: (tableName, whereClause) => {
         if (!whereClause) whereClause = '';
@@ -811,7 +833,9 @@ module.exports = {
                     tableDef.tableOwner,
                     tableDef.tableName,
                     tableData,
-                    'Monitor'
+                    'Monitor',
+                    null,
+                    true
                 );
             } else {
                 log.info('No new data to anchor');
@@ -883,6 +907,7 @@ module.exports = {
     process1TableChanges: async (tableDef, adHoc, where, includeScn, scnValue) => {
         log.info('Processing ', ' ', tableDef.tableOwner, '.', tableDef.tableName);
         log.info(' Where: ', where);
+        log.trace('IncludeSCN:', includeScn);
 
         const tableName = `${tableDef.tableOwner}.${tableDef.tableName}`;
 
@@ -1006,12 +1031,15 @@ module.exports = {
         const result = await oraConnection.execute(
             `SELECT rowid_scn,versions_starttime
                 FROM provendbcontrolrowids
-                WHERE rowid_scn LIKE :1
-                    OR rowid_scn = :2
+                WHERE rowid_scn LIKE :1 OR  rowid_scn = :2
                 ORDER BY versions_starttime DESC
                 FETCH FIRST 1 ROWS ONLY`,
             [rowid + '.%', rowid],
         );
+        if (result.rows.length === 0) {
+            log.error('Cannot find proof for rowid ', rowid);
+            throw Error('No such rowid');
+        }
         const highestRowidKey = result.rows[0][0];
         log.trace('Highest Rowid Key = ', highestRowidKey);
         return highestRowidKey;
@@ -1115,23 +1143,24 @@ module.exports = {
             const jsonFile = `${tmpDir}/${fileRowidKey}.json`;
             log.trace('temp dir and files ', tmpDir, ' ', proofFile, ' ', jsonFile);
 
-            let dataRowidKey;
+            let rowidSCNKey;
             let proofRowIdKey;
 
             const splitRowId = rowidKey.split('.');
+
             if (splitRowId.length === 1) {
                 // This key doesn't have an SCN attached.  So we will compare the
                 // most recent rowid Key with the data associated with the current SCN
                 const currentScn = await module.exports.getSCN();
-                dataRowidKey = rowidKey + '.' + currentScn;
+                rowidSCNKey = rowidKey + '.' + currentScn;
                 proofRowIdKey = await module.exports.getLatestRowidKey(rowidKey); // Get most recent rowidkey
             } else {
-                dataRowidKey = rowidKey;
+                rowidSCNKey = rowidKey;
                 proofRowIdKey = rowidKey;
                 rowid = splitRowId[0];
             }
 
-            log.trace('Data Rowid Key ', dataRowidKey);
+            log.trace('Data Rowid Key ', rowidSCNKey);
             log.trace('proof Rowid Key ', proofRowIdKey);
 
             // Retrive the proof  for this key
@@ -1144,7 +1173,7 @@ module.exports = {
 
 
             // Get the current state of data
-            const rowData = await module.exports.getRowData(tableOwner, tableName, dataRowidKey, verbose);
+            const rowData = await module.exports.getRowData(tableOwner, tableName, proofRowIdKey, verbose);
 
 
 
@@ -1152,23 +1181,23 @@ module.exports = {
             const proofHash = crypto.createHash('sha256').update(rowData.hash).digest('hex');
             // TODO: this two level hashing process might be confusing
 
-            const treeLeafValue = rowId + ':' + proofHash;
+            const treeLeafValue = proofRowIdKey + ':' + proofHash;
             log.trace('proof ', proof);
 
             if (!proof.layers[0].includes(treeLeafValue)) {
-                log.error(`Hash mismatch for ${rowId} - rowid key ${treeLeafValue} not found`);
-            } else {
-                log.info(`PASS: Rowid hash value confirmed as ${treeLeafValue}`);
+                log.error(`FAIL: Hash mismatch for ${rowId} - rowid key ${treeLeafValue} not found`);
+                return (false);
             }
-            const rowProof = await generateRowProof(proof, rowId, verbose);
+            log.info(`PASS: Rowid hash value confirmed as ${treeLeafValue}`);
+
+            const rowProof = await generateRowProof(proof, proofRowIdKey, verbose);
             log.trace(rowProof);
             const validatedProof = await validateProof(rowProof, verbose);
             log.trace('validatedProof ', validatedProof);
             log.trace('Expected value for blockchain transaction is ', validatedProof.expectedValue);
             if (await validateBlockchainHash(rowProof.anchorType, rowProof.metadata.txnId, validatedProof.expectedValue, verbose)) {
                 log.info('PASS: Proof validated with hash ', validatedProof.expectedValue, ' on ', rowProof.metadata.txnUri);
-            }
-            else {
+            } else {
                 log.error('FAIL: Cannot validate blockchain hash');
             }
 
@@ -1283,8 +1312,10 @@ module.exports = {
         await results.resultSet.close();
         console.log();
     },
-    validateProof: async (proofId, outputFile, verbose) => {
+    validateOracleProof: async (proofId, outputFile, verbose) => {
         // Get proof data from db;
+        let validatedProof;
+
         if (verbose) {
             log.setLevel('trace');
         }
@@ -1296,25 +1327,32 @@ module.exports = {
                 where,
                 metadata
             } = await module.exports.getProofDetails(proofId, verbose);
+            log.trace('metatdata ', metadata);
+
             if (tableDef.exists) {
                 // Get proof as well
-                log.info('Getting Proof');
+                log.trace('Getting Proof');
                 const proof = await module.exports.getproofFromDB(proofId);
                 // Get data corresponding to proof
-                if (prooftype === 'AdHoc') {
-                    log.info('Loading table data');
-                    const tableData = await module.exports.process1TableChanges(tableDef, 'adhoc', where, metadata.includeScn, metadata.currentScn);
-                    log.info('Validating table data against proof');
-                    const validatedProof = await validateData(proof, tableData.keyValues, outputFile, verbose);
-                    console.log(validatedProof);
+                log.trace('Loading table data');
+                const tableData = await module.exports.process1TableChanges(tableDef, 'adhoc', where, metadata.includeScn, metadata.currentScn);
+                log.trace('Validating table data against proof');
+                const validatedData = await validateData(proof, tableData.keyValues, outputFile, verbose);
+                log.trace('validated data ', validatedData);
+                const blockchainProof = proof.proofs[0];
+                log.trace(blockchainProof);
+                const validatedProof = await validateProof(blockchainProof, verbose);
+                log.trace('validatedProof ', validatedProof);
+                log.trace('Expected value for blockchain transaction is ', validatedProof.expectedValue);
+                if (await validateBlockchainHash(blockchainProof.anchorType, blockchainProof.metadata.txnId, validatedProof.expectedValue, verbose)) {
+                    log.info('PASS: Proof validated with hash ', validatedProof.expectedValue, ' on ', blockchainProof.metadata.txnUri);
                 } else {
-                    // TODO: Can only validate adhoc proofs
-                    log.error(`Cannot validate ${prooftype} proof yet`);
+                    log.error('FAIL: Cannot validate blockchain hash');
                 }
             } else {
                 log.error('Table refered to in proof no longer exists');
             }
-            // Validate
+            return (validatedProof);
         } catch (error) {
             log.error(error.message);
             throw (error);
@@ -1357,3 +1395,45 @@ module.exports = {
         };
     }
 };
+
+async function getRowDataWithScn(tableOwnerName, scn, therowid, verbose = false) {
+    if (verbose) {
+        log.setLevel('trace');
+    }
+    const sqlText = `
+        SELECT rowidtochar(c.rowid) AS row_rowid, c.*
+          FROM ${tableOwnerName} AS OF SCN :scn c
+         WHERE ROWID = :therowid`;
+
+    log.trace(sqlText);
+    let result;
+    try {
+        result = await oraConnection.execute(sqlText, {
+            scn,
+            therowid,
+        });
+        return (result);
+    } catch (error) {
+        if (error.errorNum === 8181) {
+            log.error(`Cannot get data for SCN ${scn} - insufficient flashback data`);
+            log.error('Consider implementing Flashback data archive or increase undo retention');
+        }
+        throw (error);
+    }
+}
+
+async function getRowDataNoScn(tableOwnerName, therowid, verbose = false) {
+    if (verbose) {
+        log.setLevel('trace');
+    }
+    const sqlText = `
+        SELECT rowidtochar(c.rowid) AS row_rowid, c.*
+          FROM ${tableOwnerName}  C
+         WHERE ROWID = :therowid`;
+
+    log.trace(sqlText);
+    const result = await oraConnection.execute(sqlText, {
+        therowid,
+    });
+    return (result);
+}
