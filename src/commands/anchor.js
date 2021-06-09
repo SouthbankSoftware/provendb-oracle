@@ -10,7 +10,7 @@ const {
     connectToOracle,
     check1table,
     process1TableChanges,
-    saveTrieToDB,
+    saveproofToDB,
     createProofFile
 } = require('../services/oracle');
 const {
@@ -21,7 +21,7 @@ const {
     getConfig
 } = require('../services/config');
 
-
+const debug=false;
 
 class AnchorCommand extends Command {
     async run() {
@@ -49,7 +49,7 @@ class AnchorCommand extends Command {
 
             // Establish connection:
             await connectToOracle(config, verbose);
-            await connectToProofable(config, verbose);
+            // await connectToProofable(config, verbose);
 
             // Command Specific Logic:
 
@@ -68,10 +68,15 @@ class AnchorCommand extends Command {
                 if (tableDef.exists) {
                     log.trace('Processing ', tableDef);
                     const tableData = await process1TableChanges(tableDef, 'adhoc', where, includeScn);
-                    const anchoredTrie = await anchorData(tableData, config.anchorType);
-                    const proofId = anchoredTrie.getTrieId();
-                    await saveTrieToDB(
-                        proofId,
+                    const treeWithProof = await anchorData(tableData, config.anchorType);
+                    if (debug) {
+                        console.log(treeWithProof);
+                        console.log(Object.keys(treeWithProof));
+                    }
+                    const proof = treeWithProof.proofs[0];
+                    const proofId = proof.id;
+                    await saveproofToDB(
+                        treeWithProof,
                         tableDef.tableOwner,
                         tableDef.tableName,
                         tableData,
@@ -81,13 +86,14 @@ class AnchorCommand extends Command {
                     );
                     log.info(`Proof ${proofId} created and stored to DB`);
                     if (flags.validate) {
-                        await createProofFile(anchoredTrie.getTrieId(), outputFile, includeRowIds, verbose);
+                        await createProofFile(treeWithProof, outputFile, includeRowIds, verbose);
                         log.info('Proof written to ', outputFile);
                     }
                 }
             }
         } catch (error) {
             log.error('Failed to anchor tables:');
+            log.error(error.stack);
             log.error(error.message);
         }
     }
@@ -118,14 +124,14 @@ AnchorCommand.flags = {
         multiple: false,
     }),
     includeRowIds: flags.boolean({
-      description: 'Include proofs for every row in the proof file',
-      required: false,
-      multiple: false,
-  }),
-  includeScn: flags.boolean({
-    description: 'Include SCN into rowid signature (create historical proof)',
-    default: false
-}),
+        description: 'Include proofs for every row in the proof file',
+        required: false,
+        multiple: false,
+    }),
+    includeScn: flags.boolean({
+        description: 'Include SCN into rowid signature (create historical proof)',
+        default: false
+    }),
     verbose: flags.boolean({
         char: 'v',
         description: 'increased logging verbosity',

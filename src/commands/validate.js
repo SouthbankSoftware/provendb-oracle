@@ -9,7 +9,7 @@ const tmp = require('tmp');
 const {
     connectToOracle,
     validateRow,
-    validateProof
+    validateOracleProof
 } = require('../services/oracle');
 const {
     connectToProofable
@@ -20,10 +20,10 @@ const {
 } = require('../services/config');
 
 
-// TODO: Need to include a readme in the zip file
+
 
 // TODO: Out of memory errors
-// TODO: Support for blockchain table types
+
 
 class ValidateCommand extends Command {
     async run() {
@@ -65,21 +65,23 @@ class ValidateCommand extends Command {
 
             // Establish connection:
             await connectToOracle(config, verbose);
-            await connectToProofable(config, verbose);
+            // await connectToProofable(config, verbose);
 
             // Command Specific Logic:
 
             if (rowId) {
                 log.info(`Validating row: ${rowId}`);
+
+                // TODO: Need to accept a Proof here as well.
                 await validateRow(rowId, outputFile, verbose);
 
                 log.info('Row proof written to ', outputFile);
             }
             if (proofId) {
                 log.info(`Validating proofId: ${proofId}`);
-                await validateProof(proofId, outputFile, verbose);
 
-                log.info('Proof written to ', outputFile);
+                // TODO: Need to compress the output file
+                await validateOracleProof(proofId, outputFile, verbose);
             }
         } catch (error) {
             log.error('Failed to validate row:');
@@ -97,7 +99,7 @@ confirms that the hashes match and that the hash is included in the blockchain a
 Validate generates a proof file which contains the row data and anchor information.  This 
 proof file can serve as an independent proof of the data. 
 `;
-// TODO: Schema should use ProofId, not TrieId.
+
 
 ValidateCommand.flags = {
     rowId: flags.string({

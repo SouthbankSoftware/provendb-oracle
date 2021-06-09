@@ -57,7 +57,7 @@ rules:
   react/no-multi-comp: 0
   react/no-did-mount-set-state: 0
   react/prop-types: 0
-  no-unused-vars: [error, {argsIgnorePattern: ^_}]
+  no-unused-vars: [warn, {argsIgnorePattern: ^_}]
   no-restricted-syntax: 0
   no-unused-expressions: 0
   newline-per-chained-call: 0

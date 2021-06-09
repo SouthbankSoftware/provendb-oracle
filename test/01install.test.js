@@ -56,8 +56,8 @@ describe('provendb-oracle Anchor tests', () => {
         try {
             const config = yaml.load(fs.readFileSync('testConfig.yaml'));
             config.anchorType = 'HEDERA';
-            config.proofable.token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDU3NDQ1NDUsImp0aSI6IjBRUHhBSG9XQzl1Y0ZNSjlBMUVjWFBJZUpTTlpmME84T3hDWjhkNWlTYzQ9Iiwic3ViIjoidTQ0eGl0dXhjbHZkdXRrNzg0aDI3cTlqIn0.TJUqKzHz-r-AxQcwF3ib810BVmkLTDLSfxNWVMPC2zE';
-            config.proofable.endpoint = 'api.dev.proofable.io:443';
+            config.proofable.token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MTYwNDk4NjQsImp0aSI6IjZNNGdvSlYzMUlzaWtDR05HUTlzbWk5U0JZSUJKXzhCVkZOM0k0Q3dHV3M9Iiwic3ViIjoidTBwZTR0Nm1ka3BtdWE0OGszejVnZmhrIn0.XnQYlRtxao4jjtPDi4v4WQchEXK4x8T_B_1LmxNTmpM';
+            config.proofable.endpoint = 'api.proofable.io:443';
             const newConfig = yaml.safeDump(config);
             fs.writeFileSync('testConfig.yaml', newConfig);
         } catch (e) {

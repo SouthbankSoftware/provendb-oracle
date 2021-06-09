@@ -1,0 +1,9 @@
+oracleConnection:
+  connectString: local
+  user: provendb
+  password: myLongPassword23
+anchorType: ETH
+dbmsAlert: 'TRUE'
+proofable:
+  token: YourTokenHere
+  endpoint: 'api.proofable.io:443'

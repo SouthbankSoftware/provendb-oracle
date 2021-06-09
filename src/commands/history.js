@@ -12,6 +12,7 @@ const {
     connectToOracle,
     listEntries,
     listTableEntries,
+    listProofs,
 } = require('../services/oracle');
 
 const {
@@ -27,16 +28,17 @@ class HistoryCommand extends Command {
             } = this.parse(HistoryCommand);
 
             const {
-                rowid,
+                rowId,
                 tables,
                 where,
-                verbose
+                verbose,
+                proofOnly
             } = flags;
 
-            if (!tables && !rowid) {
+            if (!tables && !rowId && !proofOnly) {
                 throw new Error('Must specify either rowid or tables argument, try --help');
             }
-            if (tables && rowid) {
+            if (tables && rowId) {
                 throw new Error('Must specify only one of rowid or tables argument, try --help');
             }
 
@@ -53,15 +55,20 @@ class HistoryCommand extends Command {
             // Establish connection:
             await connectToOracle(config, verbose);
 
+            if (proofOnly) {
+                await listProofs(tables);
+            } else {
             // Command Specific Logic:
-            if (rowid) {
-                await listEntries(rowid);
-            }
-            if (tables) {
-              await listTableEntries(tables, where);
+                if (rowId) {
+                    await listEntries(rowId);
+                }
+                if (tables) {
+                    await listTableEntries(tables, where);
+                }
             }
         } catch (error) {
             log.error('Failed to fetch history');
+            console.log(error.trace);
             log.error(error.message);
         }
     }
@@ -73,14 +80,20 @@ Show the rowids and optionally SCNs for which we have anchored proofs
 `;
 
 HistoryCommand.flags = {
-    rowid: flags.string({
+    rowId: flags.string({
         string: 'r',
         description: 'row ID to fetch versions for',
         required: false,
     }),
     tables: flags.string({
         string: 't',
-        description: 'tablenames to search (username.tablename)',
+        description: 'tablenames to include (username.tablename)',
+        required: false,
+        multiple: true,
+    }),
+    proofOnly: flags.boolean({
+        string: 'p',
+        description: 'list Proofs only (noRowids)',
         required: false,
         multiple: true,
     }),
