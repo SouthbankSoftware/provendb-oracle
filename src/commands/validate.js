@@ -11,9 +11,6 @@ const {
     validateRow,
     validateOracleProof
 } = require('../services/oracle');
-const {
-    connectToProofable
-} = require('../services/proofable');
 
 const {
     getConfig
@@ -59,7 +56,6 @@ class ValidateCommand extends Command {
 
             // Establish connection:
             await connectToOracle(config, verbose);
-            // await connectToProofable(config, verbose);
 
             // Command Specific Logic:
 

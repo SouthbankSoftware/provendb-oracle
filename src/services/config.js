@@ -67,11 +67,6 @@ module.exports = {
             }
         }
         log.trace(`Config loaded: ${JSON.stringify(config)}`);
-        /*if ((!('proofable' in config))
-            || (!('token' in config.proofable))
-            || (config.proofable.token === 'YourTokenHere')) {
-            throw new Error('Invalid  API token - see https://provendb.readme.io/docs/signing-up-and-obtaining-an-api-key');
-        }*/
         return (config);
     },
     // Save current configuration to the configuration file (unimplemented)

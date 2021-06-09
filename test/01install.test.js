@@ -15,6 +15,8 @@ const execSync = require('child_process').execSync;
 const parameters = getParameters();
 const debug = false;
 
+const prdAnchorKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhbmNob3IiLCJleHAiOjE3ODA0NDIyNzEsImp0aSI6ImF2bDc1MHlucmx1cmo3ajZjOHR1bTQxeiIsInN1YiI6InV2cHgzYjVjNXV2bXduOTRxYTd2NG5kciIsInNjb3BlIjoiMCIsInJvbGUiOiJQYWlkIn0.mUQnGKOqzcS5IqXeSAGJ6H2DY2f_bL1IaeKzKz7D4K0';
+ 
 describe('provendb-oracle Anchor tests', () => {
     beforeAll(() => { });
 
@@ -56,7 +58,7 @@ describe('provendb-oracle Anchor tests', () => {
         try {
             const config = yaml.load(fs.readFileSync('testConfig.yaml'));
             config.anchorType = 'HEDERA';
-            config.proofable.token = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MTYwNDk4NjQsImp0aSI6IjZNNGdvSlYzMUlzaWtDR05HUTlzbWk5U0JZSUJKXzhCVkZOM0k0Q3dHV3M9Iiwic3ViIjoidTBwZTR0Nm1ka3BtdWE0OGszejVnZmhrIn0.XnQYlRtxao4jjtPDi4v4WQchEXK4x8T_B_1LmxNTmpM';
+            config.proofable.token = prdAnchorKey;
             config.proofable.endpoint = 'api.proofable.io:443';
             const newConfig = yaml.safeDump(config);
             fs.writeFileSync('testConfig.yaml', newConfig);

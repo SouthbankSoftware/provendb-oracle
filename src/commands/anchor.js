@@ -14,7 +14,6 @@ const {
     createProofFile
 } = require('../services/oracle');
 const {
-    connectToProofable,
     anchorData
 } = require('../services/proofable');
 const {
@@ -68,7 +67,7 @@ class AnchorCommand extends Command {
                 if (tableDef.exists) {
                     log.trace('Processing ', tableDef);
                     const tableData = await process1TableChanges(tableDef, 'adhoc', where, includeScn);
-                    const treeWithProof = await anchorData(tableData, config.anchorType);
+                    const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, verbose);
                     if (debug) {
                         console.log(treeWithProof);
                         console.log(Object.keys(treeWithProof));

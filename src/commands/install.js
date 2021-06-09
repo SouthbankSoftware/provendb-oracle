@@ -124,7 +124,7 @@ InstallCommand.flags = {
         default: false
     }),
     createDemoAccount: flags.boolean({
-        description: 'Create the ProofableDemo account ',
+        description: 'Create the ProvenDB Demo account ',
         default: false
     }),
 };

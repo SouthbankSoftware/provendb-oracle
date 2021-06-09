@@ -46,7 +46,6 @@ class MonitorCommand extends Command {
             }
             // Establish connection:
             await connectToOracle(config, verbose);
-            await connectToProofable(config, verbose);
             await checkTables(tables);
             log.info(`Monitoring with ${interval} ms interval.`);
             // eslint-disable-next-line no-constant-condition

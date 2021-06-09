@@ -22,10 +22,9 @@
 
 const fs = require('fs');
 const log = require('simple-node-logger').createSimpleLogger();
-const proofable = require('proofable');
 const chainpointParse = require('chainpoint-parse');
 const chainpointBinary = require('chainpoint-binary');
-const tmp = require('tmp');
+// const tmp = require('tmp');
 const axios = require('axios');
 const {
     merkle,
@@ -33,8 +32,6 @@ const {
 } = require('provendb-sdk-node');
 
 const debug = false;
-
-let proofableClient;
 
 
 module.exports = {
@@ -144,13 +141,17 @@ module.exports = {
     // TODO: Create a demo script for p4o
 
     // Anchor data to a blockchain - create a trie and anchor that trie
-    anchorData: async (data, anchorChainType) => {
+    anchorData: async (data, anchorChainType, anchorToken, verbose ) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
         try {
             log.info('--> Anchoring data to ', anchorChainType);
             log.info(Object.keys(data.keyValues).length, ' keys');
             const builder = new merkle.Builder('sha-256');
             // TODO: Use dev anchor optionally not local anchor
-            const myAnchor = anchor.connect(anchor.withAddress('localhost:10008'), anchor.withInsecure(true));
+            log.trace('token ', anchorToken);
+            const myAnchor = anchor.connect(anchor.withCredentials(anchorToken));
             // const myAnchor = anchor.connect(anchor.withAddress('anchor.dev.proofable.io:443'));
 
             const keyValues = [];
@@ -182,33 +183,6 @@ module.exports = {
             log.error(error.trace);
             throw new Error(error);
         }
-    },
-    // TODO: Retry txn timed out errors on hedera
-    connectToProofable: async (config) => {
-        /* To get a token:
-          YOUR_TOKEN = "$(jq -r '.authToken' ~/Library/Application\ Support/ProvenDB/auth.json)"
-          */
-        log.trace('Connecting to ProvenDB');
-
-        if (!('proofable' in config)) {
-            proofableClient = proofable.newAPIClient('api.dev.proofable.io:443');
-        } else {
-            if (!('token' in config.proofable && 'endpoint' in config.proofable)) {
-                throw new Error('Must specify both token and endpoint in proofable config');
-            }
-            log.trace('Setting metadata token and endpoint');
-            log.trace(config.proofable);
-            const proofableMetadata = new proofable.grpc.Metadata();
-            /*        proofableMetadata.add(
-                           "authorization",
-                           "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2MDMxNTA4OTIsImp0aSI6IkRtSHd5Q05TSUVZTERrYlk3dE1DWXRHVExabDFMQjM2S2lmbWtDN1JDNGs9Iiwic3ViIjoidTQ0eGl0dXhjbHZkdXRrNzg0aDI3cTlqIn0.ujgEZKfWn4Db4C-8geggu9fOUuS6B4iTpgkDuETwx0w");
-                 */
-            const bearer = 'Bearer ' + config.proofable.token;
-            log.trace(bearer);
-            proofableMetadata.add('authorization', bearer);
-            proofableClient = proofable.newAPIClient(config.proofable.endpoint, proofableMetadata);
-        }
-        return proofableClient;
     },
     parseProof: (textProof, verbose = false) => {
         if (verbose) {
