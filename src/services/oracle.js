@@ -162,7 +162,7 @@ module.exports = {
 
         try {
             const sqls = [];
-            // TODO: Rename these table to provendbcontrol
+
             sqls.push(
                 `CREATE TABLE provendbcontrol (
                     owner_name   VARCHAR2(128) NOT NULL,
@@ -1044,7 +1044,7 @@ module.exports = {
         log.trace('Highest Rowid Key = ', highestRowidKey);
         return highestRowidKey;
     },
-    // TODO: Examples should include a FBDA managed table
+
     // Get proof for a specific rowidStarttime key
     getproofForRowid: async (rowidScn, verbose = false) => {
         if (verbose) {
@@ -1224,8 +1224,7 @@ module.exports = {
         }
     },
     // TODO: Use --unhandled-rejections=strict
-    // TODO: Optimize - dont' get proof every time from db.  Optionally don't validate
-    // TODO: Ask Guan for a server side function to produce proof file.
+
     createProofFile: async (tree, outputFile, includeRowIds = false, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
@@ -1253,7 +1252,7 @@ module.exports = {
                     } = leaves[li];
                     const fileKey = module.exports.safeRowId(key);
                     const rowproof = tree.addPathToProof(proof, key, 'pdb_row_branch');
-                    // TODO: Include the data in the proof.
+
                     await fs.writeFileSync(rowProofTmpDir + '/' + fileKey + '.proof', rowproof);
                 }
                 await zipFile.addLocalFolder(rowProofTmpDir, 'rowProofs');
@@ -1337,7 +1336,15 @@ module.exports = {
                 log.trace('Loading table data');
                 const tableData = await module.exports.process1TableChanges(tableDef, 'adhoc', where, metadata.includeScn, metadata.currentScn);
                 log.trace('Validating table data against proof');
-                const validatedData = await validateData(proof, tableData.keyValues, outputFile, verbose);
+                const proofMetadata = {
+                    tableOwner:tableDef.tableOwner,
+                    tableName:tableDef.tableName,
+                    whereClause:where,
+                    includeScn:metadata.includeScn,
+                    currentScn:metadata.currentScn,
+                    validationDate:new Date()
+                };
+                const validatedData = await validateData(proof, tableData.keyValues, outputFile, proofMetadata, verbose);
                 log.trace('validated data ', validatedData);
                 const blockchainProof = proof.proofs[0];
                 log.trace(blockchainProof);

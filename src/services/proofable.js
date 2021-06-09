@@ -68,8 +68,8 @@ module.exports = {
             log.setLevel('trace');
         }
         const apiKey = 'XV98BFQPFGWMDKHWH6NSQ1VM74S3ABTKZS';
-        const txRest = 'https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHas' +
-            'h&txhash=' + transactionId + '&apikey=' + apiKey;
+        const txRest = 'https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHas'
+            + 'h&txhash=' + transactionId + '&apikey=' + apiKey;
         try {
             const config = {
                 method: 'get',
@@ -106,7 +106,7 @@ module.exports = {
         }
     },
     // Validate data against an existing proof
-    validateData: async (proof, inputKeyValues, outputFile, verbose) => {
+    validateData: async (proof, inputKeyValues, outputFile, metadata, verbose) => {
         if (verbose) {
             log.setLevel('trace');
         }
@@ -131,7 +131,14 @@ module.exports = {
             goodProof = false;
         }
         // TODO: Should compress this file
-        await fs.writeFileSync(outputFile, JSON.stringify(proof));
+        if (goodProof) {
+            const proofDoc = {
+                metadata,
+                tree: proof
+            };
+            log.info('Wrote proof to', outputFile);
+            await fs.writeFileSync(outputFile, JSON.stringify(proofDoc));
+        }
         return (goodProof);
     },
     // TODO: Create a demo script for p4o
@@ -224,7 +231,7 @@ module.exports = {
         }
         const debug = false;
         try {
-            log.trace('proof in validateProof',proof);
+            log.trace('proof in validateProof', proof);
             let objectProof = proof.data;
             // TODO: Not sure why this is neccessary but otherwise Chainpoint barfs on proof
             if (true) {

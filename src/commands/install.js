@@ -47,7 +47,7 @@ class InstallCommand extends Command {
             let effectiveDbaPassword = dbaPassword;
 
             if (!flags.sysPassword && !flags.dbaUserName && !flags.dbaPassword) {
-                // TODO: Assignment to contant variable error caused here
+
                 sysPassword = await passwordPrompt('Enter SYS password: ', {
                     method: 'mask'
                 });
