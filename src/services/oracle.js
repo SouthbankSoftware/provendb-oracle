@@ -66,7 +66,7 @@ module.exports = {
             log.trace('Connected to Oracle');
             if (verbose) {
                 await module.exports.execSQL(oraConnection, 'begin dbms_session.session_trace_enable(waits=>TRUE);end;', false, verbose);
-                await module.exports.execSQL(oraConnection, 'ALTER SESSION SET tracefile_identifier=proofable', false, verbose);
+                await module.exports.execSQL(oraConnection, 'ALTER SESSION SET tracefile_identifier=provendb', false, verbose);
                 const sqlt = `SELECT s.sql_trace, p.tracefile 
                                 FROM v$session s JOIN v$process p ON (p.addr= s.paddr) 
                                WHERE audsid = USERENV ('SESSIONID')`;
@@ -295,17 +295,17 @@ module.exports = {
             // These can fail.
             sqls = [];
             sqls.push(
-                `CREATE OR REPLACE TRIGGER contractsTable_proofable_trg 
+                `CREATE OR REPLACE TRIGGER contractsTable_prrovendb_trg 
                     AFTER INSERT OR UPDATE OR DELETE ON contractsTable
                     BEGIN 
-                      DBMS_ALERT.SIGNAL('provendb_alert','proofable table modified'); 
+                      DBMS_ALERT.SIGNAL('provendb_alert','provendb table modified'); 
                     END; `
             );
             sqls.push(
-                `CREATE OR REPLACE TRIGGER contractsTableFB_proofable_trg 
+                `CREATE OR REPLACE TRIGGER contractsTableFB_prrovendb_trg 
                     AFTER INSERT OR UPDATE OR DELETE ON contractstablefbda
                     BEGIN 
-                        DBMS_ALERT.SIGNAL('provendb_alert','proofable table modified'); 
+                        DBMS_ALERT.SIGNAL('provendb_alert','provendb table modified'); 
                     END; `
             );
             sqls.push(`CREATE flashback archive ${provendbDemoUser} tablespace ${defaultTablespace} retention 1 month`);
@@ -818,7 +818,7 @@ module.exports = {
 
     // Process changes for all registered tables
     processTableChanges: async (config) => {
-        log.info('Processing all table changes');
+        log.info('Processing all table changes');     s
 
         const tableNames = Object.keys(tableDefs);
         for (let tableNo = 0; tableNo < tableNames.length; tableNo++) {
@@ -826,7 +826,7 @@ module.exports = {
             log.trace('Processing ', tableDef);
             const tableData = await module.exports.process1TableChanges(tableDef, false, null, true, null);
             if (Object.keys(tableData.keyValues).length > 0) {
-                const treeWithProof = await anchorData(tableData, config.anchorType);
+                const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, false);
 
                 await module.exports.saveproofToDB(
                     treeWithProof,
