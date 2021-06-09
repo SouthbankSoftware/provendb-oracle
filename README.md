@@ -22,7 +22,7 @@ $ npm install -g provendb-oracle
 $ provendb-oracle COMMAND
 running command...
 $ provendb-oracle (-v|--version|version)
-provendb-oracle/0.0.0 darwin-x64 node-v15.6.0
+provendb-oracle/0.0.0 darwin-x64 node-v12.20.1
 $ provendb-oracle --help [COMMAND]
 USAGE
   $ provendb-oracle COMMAND
@@ -116,8 +116,9 @@ USAGE
 OPTIONS
   -v, --verbose    increased logging verbosity
   --config=config  config file location
-  --rowid=rowid    row ID to fetch versions for
-  --tables=tables  tablenames to search (username.tablename)
+  --proofOnly      list Proofs only (noRowids)
+  --rowId=rowId    row ID to fetch versions for
+  --tables=tables  tablenames to include (username.tablename)
   --where=where    WHERE clause to filter rows
 
 DESCRIPTION

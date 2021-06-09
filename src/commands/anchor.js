@@ -21,7 +21,7 @@ const {
     getConfig
 } = require('../services/config');
 
-const debug=false;
+const debug = false;
 
 class AnchorCommand extends Command {
     async run() {

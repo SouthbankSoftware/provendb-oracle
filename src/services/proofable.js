@@ -136,7 +136,7 @@ module.exports = {
                 metadata,
                 tree: proof
             };
-            log.info('Wrote proof to', outputFile);
+            log.info('Wrote proof to ', outputFile);
             await fs.writeFileSync(outputFile, JSON.stringify(proofDoc));
         }
         return (goodProof);

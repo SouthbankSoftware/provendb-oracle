@@ -19,12 +19,6 @@ const {
     getConfig
 } = require('../services/config');
 
-
-
-
-// TODO: Out of memory errors
-
-
 class ValidateCommand extends Command {
     async run() {
         try {
