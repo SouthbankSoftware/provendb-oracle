@@ -34,6 +34,7 @@ const {
 const debug = false;
 
 
+
 module.exports = {
     // Directly access the proofable client for functions using proofable APIs that fall under the Oracle umbrella.
     validateBlockchainHash: async (anchorType, txnId, expectedValue, verbose = false) => {
@@ -151,7 +152,7 @@ module.exports = {
             const builder = new merkle.Builder('sha-256');
             // TODO: Use dev anchor optionally not local anchor
             log.trace('token ', anchorToken);
-            const myAnchor = anchor.connect(anchor.withCredentials(anchorToken));
+            const myAnchor = anchor.connect(anchor.withAddress('anchor.proofable.io:443'), anchor.withCredentials(anchorToken));
             // const myAnchor = anchor.connect(anchor.withAddress('anchor.dev.proofable.io:443'));
 
             const keyValues = [];

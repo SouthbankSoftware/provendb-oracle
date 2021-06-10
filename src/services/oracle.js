@@ -656,7 +656,7 @@ module.exports = {
         let sqlText;
         let startScn = currentScn;
         let result;
-        let whereClause;
+        let whereClause = '';
 
         if (where) {
             whereClause = 'WHERE ' + where;
@@ -818,7 +818,7 @@ module.exports = {
 
     // Process changes for all registered tables
     processTableChanges: async (config) => {
-        log.info('Processing all table changes');     s
+        log.info('Processing all table changes');
 
         const tableNames = Object.keys(tableDefs);
         for (let tableNo = 0; tableNo < tableNames.length; tableNo++) {

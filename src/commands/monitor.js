@@ -47,13 +47,13 @@ class MonitorCommand extends Command {
             // Establish connection:
             await connectToOracle(config, verbose);
             await checkTables(tables);
-            log.info(`Monitoring with ${interval} ms interval.`);
+            log.info(`Monitoring with ${interval} s interval.`);
             // eslint-disable-next-line no-constant-condition
 
             const monitorStartTime = (new Date().getTime());
             let monitorLoop = true;
             while (monitorLoop) {
-                const elapsedTime = (new Date().getTime())-monitorStartTime;
+                const elapsedTime = (new Date().getTime()) - monitorStartTime;
                 log.trace(`Elapsed time ${elapsedTime}`);
                 if ((elapsedTime > (maxTime * 1000)) && maxTime > 0) {
                     log.info(`Max monitoring time ${maxTime} exceeded`);

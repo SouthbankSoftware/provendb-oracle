@@ -74,23 +74,26 @@ module.exports = {
         if (verbose) {
             log.setLevel('trace');
         }
+        const freeAnchorKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhbmNob3IiLCJleHAiOjE3ODA0NDIyNzEsImp0aSI6ImF2bDc1MHlucmx1cmo3ajZjOHR1bTQxeiIsInN1YiI6InV2cHgzYjVjNXV2bXduOTRxYTd2NG5kciIsInNjb3BlIjoiMCIsInJvbGUiOiJQYWlkIn0.mUQnGKOqzcS5IqXeSAGJ6H2DY2f_bL1IaeKzKz7D4K0';
+ 
         const config = {
             oracleConnection: {
                 connectString: oracleConnection,
                 user: provendbUser,
                 password: provendbPassword
             },
-            anchorType: 'ETH',
+            anchorType: 'HEDERA',
             dbmsAlert: 'TRUE',
             proofable: {
-                token: 'YourTokenHere',
-                endpoint: 'api.proofable.io:443'
+                token: freeAnchorKey,
+                endpoint: 'anchor.proofable.io:443'
             }
         };
 
         const newConfig = yaml.safeDump(config);
         fs.writeFileSync(fileName, newConfig);
         log.info('Wrote new config to ', fileName);
+        log.info('This configuration uses a trial key - get your key at https://app.provendb.com/app/dashboard/api-keys');
         log.trace(newConfig);
     },
 };
