@@ -74,8 +74,7 @@ module.exports = {
         if (verbose) {
             log.setLevel('trace');
         }
-        const freeAnchorKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhbmNob3IiLCJleHAiOjE3ODA0NDIyNzEsImp0aSI6ImF2bDc1MHlucmx1cmo3ajZjOHR1bTQxeiIsInN1YiI6InV2cHgzYjVjNXV2bXduOTRxYTd2NG5kciIsInNjb3BlIjoiMCIsInJvbGUiOiJQYWlkIn0.mUQnGKOqzcS5IqXeSAGJ6H2DY2f_bL1IaeKzKz7D4K0';
- 
+        const freeAnchorKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhbmNob3IiLCJleHAiOjE3ODA5ODE5MzMsImp0aSI6ImFhMW5nbnFtNDVpMHFtNHIxMHZmeGp1ZiIsInN1YiI6InUya3o3ZTc1NnNuajF6NTFid2g1bTZuZyIsInNjb3BlIjoiMCIsInJvbGUiOiJGcmVlIn0.MtooMUPuhCnve1DwJKqXQyh324I2x_9_ASH-xSs3j-0';
         const config = {
             oracleConnection: {
                 connectString: oracleConnection,
