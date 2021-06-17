@@ -64,7 +64,8 @@ module.exports = {
                 password,
             });
             log.trace('Connected to Oracle');
-            if (verbose) {
+            log.info('SQL TRACE is ', process.env.SQL_TRACE);
+            if (verbose || ('SQL_TRACE' in process.env && process.env.SQL_TRACE === 'TRUE')) {
                 await module.exports.execSQL(oraConnection, 'begin dbms_session.session_trace_enable(waits=>TRUE);end;', false, verbose);
                 await module.exports.execSQL(oraConnection, 'ALTER SESSION SET tracefile_identifier=provendb', false, verbose);
                 const sqlt = `SELECT s.sql_trace, p.tracefile 
@@ -74,7 +75,7 @@ module.exports = {
                 log.trace(result);
                 const enabled = result.rows[0][0];
                 const location = result.rows[0][1];
-                log.trace(`SQL trace ${enabled} at ${location}`);
+                log.info(`SQL trace ${enabled} at ${location}`);
             }
             return oraConnection;
         } catch (error) {
@@ -93,6 +94,7 @@ module.exports = {
                 config.oracleConnection.connectString,
                 config.oracleConnection.user,
                 config.oracleConnection.password,
+                verbose
             );
             return oraConnection;
         } catch (error) {
