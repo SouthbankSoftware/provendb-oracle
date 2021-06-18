@@ -857,11 +857,7 @@ module.exports = {
 
 
             // Create an array of bind variables for array insert
-            const rowIdBindData = [];
-            Object.keys(tableData.keyValues).forEach((key) => {
-                // const timePart = new Date(Number(key.split('.')[1]));
-                rowIdBindData.push([proofId, key, new Date(tableData.keyTimeStamps[key])]);
-            });
+
             const metadata = {
                 tableOwner,
                 tableName,
@@ -891,13 +887,36 @@ module.exports = {
             );
             log.info(`${insOut.rowsAffected} rows inserted into provendbcontrol`);
 
+            let rowIdBindData = [];
+            let totalRows = 0;
+            // Object.keys(tableData.keyValues).forEach((key) => {
+            const keys = Object.keys(tableData.keyValues);
+             for (let ki = 0; ki < keys.length; ki += 1) {
+                 const key = keys[ki];
+                 // const timePart = new Date(Number(key.split('.')[1]));
+                 rowIdBindData.push([proofId, key, new Date(tableData.keyTimeStamps[key])]);
+                 if (ki % 10000 === 9999) {
+                    const ins2Out = await oraConnection.executeMany(
+                        `INSERT INTO provendbcontrolrowids 
+                         (proofId, rowid_scn, versions_starttime ) 
+                          VALUES(:1, :2, :3 )`,
+                        rowIdBindData,
+                    );
+                    process.stdout.write('.');
+                    totalRows += ins2Out.rowsAffected;
+                    rowIdBindData = [];
+                 }
+             }
+
             const ins2Out = await oraConnection.executeMany(
                 `INSERT INTO provendbcontrolrowids 
                  (proofId, rowid_scn, versions_starttime ) 
                   VALUES(:1, :2, :3 )`,
                 rowIdBindData,
             );
-            log.info(`${ins2Out.rowsAffected} rows inserted into provendbcontrolrowids`);
+            totalRows += ins2Out.rowsAffected;
+            process.stdout.write('\n');
+            log.info(`${totalRows} rows inserted into provendbcontrolrowids`);
             await oraConnection.commit();
         } catch (error) {
             log.error(error.message);
