@@ -1,1 +1,1 @@
-node ~/git/provendb-oracle/bin/run.js  $*
+node --max-old-space-size=8192 ~/git/provendb-oracle/bin/run.js  $*

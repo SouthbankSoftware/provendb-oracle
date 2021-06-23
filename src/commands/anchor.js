@@ -30,6 +30,8 @@ class AnchorCommand extends Command {
             const {
                 flags
             } = this.parse(AnchorCommand);
+
+
             const {
                 tables,
                 where,
@@ -38,6 +40,7 @@ class AnchorCommand extends Command {
                 verbose
             } = flags;
             const outputFile = flags.validate;
+            const whereClause = where.join(' ');
 
             log.info(`Anchoring Tables: ${tables}`);
 
@@ -66,7 +69,7 @@ class AnchorCommand extends Command {
                 const tableDef = await check1table(userName, tableName);
                 if (tableDef.exists) {
                     log.trace('Processing ', tableDef);
-                    const tableData = await process1TableChanges(tableDef, 'adhoc', where, includeScn);
+                    const tableData = await process1TableChanges(tableDef, 'adhoc', whereClause, includeScn);
                     const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, verbose);
                     if (debug) {
                         console.log(treeWithProof);
@@ -80,7 +83,7 @@ class AnchorCommand extends Command {
                         tableDef.tableName,
                         tableData,
                         'AdHoc',
-                        where,
+                        whereClause,
                         includeScn
                     );
                     log.info(`Proof ${proofId} created and stored to DB`);
@@ -114,7 +117,7 @@ AnchorCommand.flags = {
         string: 'w',
         description: 'WHERE clause to filter rows',
         required: false,
-        multiple: false,
+        multiple: true,
     }),
     validate: flags.string({
         string: 'o',
