@@ -50,6 +50,9 @@ const tableDefs = [];
 // TODO: Need to get rid of the tableDefs global.
 let monitorStartTime;
 
+// TODO: include certificate in the row proof
+// TODO: Make sure that the data in the proof file can be re-validated
+// TODO: Don't include data in the proof unless on request. 
 
 module.exports = {
     connectToOracleDirect: async (connectString, user, password, verbose = false) => {
