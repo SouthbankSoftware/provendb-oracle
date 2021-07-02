@@ -1,7 +1,7 @@
 {
     "name": "provendb-oracle",
     "description": "ProvenDB Connector for Oracle",
-    "version": "0.5.0",
+    "version": "0.5.1",
     "author": "Guy Harrison",
     "bin": {
         "provendb-oracle": "./run.js"
@@ -25,6 +25,7 @@
         "minimist": "^0.2.1",
         "oracledb": "^5.0.0",
         "password-prompt": "^1.1.2",
+        "path": "^0.12.7",
         "pkg": "^4.4.9",
         "provendb-sdk-node": "0.1.0-alpha.2",
         "simple-node-logger": "^18.12.24",

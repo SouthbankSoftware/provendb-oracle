@@ -31,7 +31,7 @@ class AnchorCommand extends Command {
                 flags
             } = this.parse(AnchorCommand);
 
-
+            let whereClause;
             const {
                 tables,
                 where,
@@ -40,7 +40,9 @@ class AnchorCommand extends Command {
                 verbose
             } = flags;
             const outputFile = flags.validate;
-            const whereClause = where.join(' ');
+            if (where) {
+                whereClause = where.join(' ');
+            }
 
             log.info(`Anchoring Tables: ${tables}`);
 

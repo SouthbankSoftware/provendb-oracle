@@ -26,6 +26,7 @@ const chainpointParse = require('chainpoint-parse');
 const chainpointBinary = require('chainpoint-binary');
 // const tmp = require('tmp');
 const axios = require('axios');
+const Path = require('path');
 const {
     merkle,
     anchor
@@ -60,6 +61,39 @@ module.exports = {
         }
         log.info('FAIL: blockchain hash does not match expected hash from proof');
         return (false);
+    },
+    genProofCertificate: async (proof, fileName, apiKey, verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        const endPoint = 'https://api.provendocs.com/api/getCertificate/';
+
+        const path = Path.resolve(fileName);
+        const writer = fs.createWriteStream(path);
+        try {
+            const config = {
+                method: 'post',
+                url: endPoint,
+                responseType: 'stream',
+                headers: {
+                    'Authorization': apiKey
+                },
+                data: proof
+            };
+            log.trace(config);
+            const response = await axios(config);
+            log.trace(response);
+            response.data.pipe(writer);
+            return new Promise((resolve, reject) => {
+                writer.on('finish', () => {
+                    writer.close();
+                    resolve(path);
+                });
+                writer.on('error', reject);
+            });
+        } catch (error) {
+            throw new Error(error);
+        }
     },
     lookupEthTxn: async (transactionId, verbose) => {
         if (verbose) {
@@ -142,7 +176,7 @@ module.exports = {
     // TODO: Create a demo script for p4o
 
     // Anchor data to a blockchain - create a trie and anchor that trie
-    anchorData: async (data, anchorChainType, anchorToken, verbose ) => {
+    anchorData: async (data, anchorChainType, anchorToken, verbose) => {
         if (verbose) {
             log.setLevel('trace');
         }

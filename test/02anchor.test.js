@@ -31,7 +31,17 @@ describe('provendb-oracle Anchor tests', () => {
     test('anchor table SCN', async () => {
         jest.setTimeout(120000);
 
-        const output = await provendbOracle(`anchor --config=testConfig.yaml  --tables=${demoSchema}.CONTRACTSTABLE --validate=testProof.proof --where="CONTRACTID>0"`);
+        const output = await provendbOracle(`anchor --config=testConfig.yaml  --tables=${demoSchema}.CONTRACTSTABLE --validate=testProof.proof --where="CONTRACTID>0 AND CONTRACTID<100"`);
+        expect(output).not.toEqual(expect.stringMatching('ERROR'));
+        expect(output).toEqual(expect.stringMatching('Proof written to testProof.proof'));
+        expect(output).toEqual(expect.stringMatching('99 keys'));
+    });
+
+    test('anchor table no Where', async () => {
+        jest.setTimeout(120000);
+
+        const output = await provendbOracle(`anchor --config=testConfig.yaml  --tables=${demoSchema}.CONTRACTSTABLE --validate=testProof.proof  `);
+        expect(output).not.toEqual(expect.stringMatching('ERROR'));
         expect(output).toEqual(expect.stringMatching('Proof written to testProof.proof'));
         expect(output).toEqual(expect.stringMatching('INFO  100 keys'));
     });
@@ -39,7 +49,7 @@ describe('provendb-oracle Anchor tests', () => {
     test('anchor table FBDA', async () => {
         jest.setTimeout(120000);
         const output = await provendbOracle(`anchor --config=testConfig.yaml --includeRowIds --includeScn --tables=${demoSchema}.CONTRACTSTABLEFBDA --validate=testProof.proof --where="CONTRACTID>0"`);
-
+        expect(output).not.toEqual(expect.stringMatching('ERROR'));
         expect(output).toEqual(expect.stringMatching('Proof written to testProof.proof'));
         expect(output).toEqual(expect.stringMatching('INFO  100 keys'));
     });
@@ -47,7 +57,7 @@ describe('provendb-oracle Anchor tests', () => {
     test('anchor table FBDA noSCN', async () => {
         jest.setTimeout(120000);
         const output = await provendbOracle(`anchor --config=testConfig.yaml   --tables=${demoSchema}.CONTRACTSTABLEFBDA --validate=testProof.proof --where="CONTRACTID>0"`);
-
+        expect(output).not.toEqual(expect.stringMatching('ERROR'));
         expect(output).toEqual(expect.stringMatching('Anchored to'));
         expect(output).toEqual(expect.stringMatching('Proof written to testProof.proof'));
         expect(output).toEqual(expect.stringMatching('INFO  100 keys'));
