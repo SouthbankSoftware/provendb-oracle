@@ -5,17 +5,17 @@ provendb-oracle anchor --tables=PROVENDBDEMO.CONTRACTSTABLE
 
 provendb-oracle history --tables=PROVENDBDEMO.CONTRACTSTABLE --where=CONTRACTID=1
 
-provendb-oracle validate --rowId=AAAR7iAAMAAAAldAAA
+provendb-oracle validate --rowId=AAASD+AAMAAAAleAAA
 
-unzip unzip AAAR7iAAMAAAAldAAA.provendb
+unzip unzip AAASD+AAMAAAAleAAA.provendb
 
-jq <AAAR7iAAMAAAAldAAA.json
+jq <AAASD+AAMAAAAleAAA.json
 
 sql provendbdemo/myLongPassword23@local
 
 update contractstable set mytimestamp=sysdate-365 where contractid=1;
 
-provendb-oracle validate --rowId=AAAR7iAAMAAAAldAAA
+provendb-oracle validate --rowId=AAASD+AAMAAAAleAAA
 
 provendb-oracle monitor --help
 
