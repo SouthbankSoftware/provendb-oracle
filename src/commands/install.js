@@ -17,7 +17,7 @@ const {
     saveConfig
 } = require('../services/config');
 
-// TODO: Use Oracle JSON tables
+
 
 class InstallCommand extends Command {
     async run() {

@@ -17,8 +17,6 @@ const {
     getConfig
 } = require('../services/config');
 
-// TODO: Where clause filter for monitor
-// TODO: Allow table list to be specified on command line
 
 class MonitorCommand extends Command {
     async run() {

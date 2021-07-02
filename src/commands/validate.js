@@ -27,7 +27,8 @@ class ValidateCommand extends Command {
             const {
                 rowId,
                 proofId,
-                verbose
+                verbose,
+                generateCertificate,
             } = flags;
 
             if (!(rowId || proofId)) {
@@ -63,7 +64,7 @@ class ValidateCommand extends Command {
                 log.info(`Validating row: ${rowId}`);
 
                 // TODO: Need to accept a Proof here as well.
-                await validateRow(rowId, outputFile, verbose);
+                await validateRow(rowId, outputFile, generateCertificate, config, verbose);
 
                 log.info('Row proof written to ', outputFile);
             }
@@ -105,6 +106,11 @@ ValidateCommand.flags = {
     output: flags.string({
         string: 'o',
         description: 'output file for proof',
+        required: false,
+    }),
+    generateCertificate: flags.boolean({
+        string: 'c',
+        description: 'Include PDF certificate with row proof',
         required: false,
     }),
     verbose: flags.boolean({

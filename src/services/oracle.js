@@ -41,7 +41,8 @@ const {
     validateProof,
     parseProof,
     generateRowProof,
-    validateData
+    validateData,
+    genProofCertificate
 } = require('./proofable');
 
 oracledb.autoCommit = false;
@@ -50,6 +51,9 @@ const tableDefs = [];
 // TODO: Need to get rid of the tableDefs global.
 let monitorStartTime;
 
+// TODO: include certificate in the row proof
+// TODO: Make sure that the data in the proof file can be re-validated
+// TODO: Don't include data in the proof unless on request.
 
 module.exports = {
     connectToOracleDirect: async (connectString, user, password, verbose = false) => {
@@ -331,8 +335,8 @@ module.exports = {
             if (ignoreErrors === false) {
                 log.error(error.message, ' while executing ', sqlText);
                 throw (error);
-            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum))
-                || ignoreErrors === error.errorNum || ignoreErrors === true) {
+            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum)) ||
+                ignoreErrors === error.errorNum || ignoreErrors === true) {
                 log.info(error.message, ' handled while executing ', sqlText);
             } else {
                 log.error(error.message, ' while executing ', sqlText);
@@ -891,11 +895,11 @@ module.exports = {
             let totalRows = 0;
             // Object.keys(tableData.keyValues).forEach((key) => {
             const keys = Object.keys(tableData.keyValues);
-             for (let ki = 0; ki < keys.length; ki += 1) {
-                 const key = keys[ki];
-                 // const timePart = new Date(Number(key.split('.')[1]));
-                 rowIdBindData.push([proofId, key, new Date(tableData.keyTimeStamps[key])]);
-                 if (ki % 10000 === 9999) {
+            for (let ki = 0; ki < keys.length; ki += 1) {
+                const key = keys[ki];
+                // const timePart = new Date(Number(key.split('.')[1]));
+                rowIdBindData.push([proofId, key, new Date(tableData.keyTimeStamps[key])]);
+                if (ki % 10000 === 9999) {
                     const ins2Out = await oraConnection.executeMany(
                         `INSERT INTO provendbcontrolrowids 
                          (proofId, rowid_scn, versions_starttime ) 
@@ -905,8 +909,8 @@ module.exports = {
                     process.stdout.write('.');
                     totalRows += ins2Out.rowsAffected;
                     rowIdBindData = [];
-                 }
-             }
+                }
+            }
 
             const ins2Out = await oraConnection.executeMany(
                 `INSERT INTO provendbcontrolrowids 
@@ -1146,7 +1150,7 @@ module.exports = {
         }
     },
     // Validate a rowid/timstamp key
-    validateRow: async (rowidKey, outputFile, verbose = false, silent = false) => {
+    validateRow: async (rowidKey, outputFile, generateCertificate = false, config, verbose = false, silent = false) => {
         // Output files
         try {
             if (verbose) {
@@ -1162,7 +1166,8 @@ module.exports = {
             }
             const proofFile = `${tmpDir}/${fileRowidKey}.proof`;
             const jsonFile = `${tmpDir}/${fileRowidKey}.json`;
-            log.trace('temp dir and files ', tmpDir, ' ', proofFile, ' ', jsonFile);
+            const certificateFile = `${tmpDir}/${fileRowidKey}.pdf`;
+            log.trace('temp dir and files ', tmpDir, ' ', proofFile, ' ', certificateFile, ' ', jsonFile);
 
             let rowidSCNKey;
             let proofRowIdKey;
@@ -1180,10 +1185,8 @@ module.exports = {
                 proofRowIdKey = rowidKey;
                 rowid = splitRowId[0];
             }
-
             log.trace('Data Rowid Key ', rowidSCNKey);
             log.trace('proof Rowid Key ', proofRowIdKey);
-
             // Retrive the proof  for this key
             const {
                 proof,
@@ -1191,17 +1194,11 @@ module.exports = {
                 tableName
             } = await module.exports.getproofForRowid(proofRowIdKey, verbose);
             log.trace('proof ', proof);
-
-
             // Get the current state of data
             const rowData = await module.exports.getRowData(tableOwner, tableName, proofRowIdKey, verbose);
-
-
-
             log.trace('key/value for rowProof ', rowData);
             const proofHash = crypto.createHash('sha256').update(rowData.hash).digest('hex');
             // TODO: this two level hashing process might be confusing
-
             const treeLeafValue = proofRowIdKey + ':' + proofHash;
             log.trace('proof ', proof);
 
@@ -1210,7 +1207,6 @@ module.exports = {
                 return (false);
             }
             log.info(`PASS: Rowid hash value confirmed as ${treeLeafValue}`);
-
             const rowProof = await generateRowProof(proof, proofRowIdKey, verbose);
             log.trace(rowProof);
             const validatedProof = await validateProof(rowProof, verbose);
@@ -1221,18 +1217,23 @@ module.exports = {
             } else {
                 log.error('FAIL: Cannot validate blockchain hash');
             }
-
-
             // Change rowData key to match proof key
             // (eg, make the rowid.scn number the same as is in the proof)
             rowData.key = proofRowIdKey;
-
-            const jsonData = JSON.stringify({
+            const jsonData = {
                 rowData,
                 rowProof
-            });
+            };
+            const jsonString = JSON.stringify(jsonData);
             if (outputFile) {
-                await fs.writeFileSync(jsonFile, jsonData);
+                if (generateCertificate) {
+                    if (!('complianceVaultKey' in config.proofable)) {
+                        log.warn('No Compliance vault key in config file - cannot generate PDF certificates');
+                    } else {
+                        await genProofCertificate(jsonData, certificateFile, config.proofable.complianceVaultKey, verbose);
+                    }
+                }
+                await fs.writeFileSync(jsonFile, jsonString);
                 const zipFile = new AdmZip();
                 zipFile.addLocalFolder(tmpDir);
                 await zipFile.writeZip(outputFile);
@@ -1319,7 +1320,7 @@ module.exports = {
                     outFile = `${tmpDir}/${fileRowidKey}.provendb`;
                 }
                 try {
-                    await module.exports.validateRow(rowIdScn, outFile, verbose, true);
+                    await module.exports.validateRow(rowIdScn, outFile, false, {}, verbose, true);
                     process.stdout.write('.');
                 } catch (error) {
                     log.error(error.message, ` while retrieving rowid ${rowIdScn} for proof`);
@@ -1358,12 +1359,12 @@ module.exports = {
                 const tableData = await module.exports.process1TableChanges(tableDef, 'adhoc', where, metadata.includeScn, metadata.currentScn);
                 log.trace('Validating table data against proof');
                 const proofMetadata = {
-                    tableOwner:tableDef.tableOwner,
-                    tableName:tableDef.tableName,
-                    whereClause:where,
-                    includeScn:metadata.includeScn,
-                    currentScn:metadata.currentScn,
-                    validationDate:new Date()
+                    tableOwner: tableDef.tableOwner,
+                    tableName: tableDef.tableName,
+                    whereClause: where,
+                    includeScn: metadata.includeScn,
+                    currentScn: metadata.currentScn,
+                    validationDate: new Date()
                 };
                 const validatedData = await validateData(proof, tableData.keyValues, outputFile, proofMetadata, verbose);
                 log.trace('validated data ', validatedData);
