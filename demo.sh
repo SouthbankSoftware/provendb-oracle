@@ -5,11 +5,13 @@ provendb-oracle anchor --tables=PROVENDBDEMO.CONTRACTSTABLE
 
 provendb-oracle history --tables=PROVENDBDEMO.CONTRACTSTABLE --where=CONTRACTID=1
 
-provendb-oracle validate --rowId=AAASD+AAMAAAAleAAA
+provendb-oracle validate --rowId=AAASD+AAMAAAAleAAA 
 
 unzip unzip AAASD+AAMAAAAleAAA.provendb
 
 jq <AAASD+AAMAAAAleAAA.json
+
+provendb-oracle validate --rowId=AAASD+AAMAAAAleAAA --generateCertificate
 
 sql provendbdemo/myLongPassword23@local
 

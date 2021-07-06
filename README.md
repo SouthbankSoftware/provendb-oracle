@@ -22,7 +22,7 @@ $ npm install -g provendb-oracle
 $ provendb-oracle COMMAND
 running command...
 $ provendb-oracle (-v|--version|version)
-provendb-oracle/0.5.0 darwin-x64 node-v12.20.1
+provendb-oracle/0.5.1 darwin-x64 node-v12.20.1
 $ provendb-oracle --help [COMMAND]
 USAGE
   $ provendb-oracle COMMAND
@@ -63,7 +63,7 @@ DESCRIPTION
   clause.  Rows are hashed and anchored to the blockchain.
 ```
 
-_See code: [src/commands/anchor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.0/src/commands/anchor.js)_
+_See code: [src/commands/anchor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.1/src/commands/anchor.js)_
 
 ## `provendb-oracle autocomplete [SHELL]`
 
@@ -126,7 +126,7 @@ DESCRIPTION
   Show the rowids and optionally SCNs for which we have anchored proofs
 ```
 
-_See code: [src/commands/history.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.0/src/commands/history.js)_
+_See code: [src/commands/history.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.1/src/commands/history.js)_
 
 ## `provendb-oracle install`
 
@@ -149,7 +149,7 @@ OPTIONS
   --sysPassword=sysPassword            SYS Password (instead of DBA username/password)
 ```
 
-_See code: [src/commands/install.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.0/src/commands/install.js)_
+_See code: [src/commands/install.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.1/src/commands/install.js)_
 
 ## `provendb-oracle monitor`
 
@@ -172,7 +172,7 @@ DESCRIPTION
   in the configuration file.
 ```
 
-_See code: [src/commands/monitor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.0/src/commands/monitor.js)_
+_See code: [src/commands/monitor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.1/src/commands/monitor.js)_
 
 ## `provendb-oracle validate`
 
@@ -183,11 +183,12 @@ USAGE
   $ provendb-oracle validate
 
 OPTIONS
-  -v, --verbose      increased logging verbosity
-  --config=config    config file location
-  --output=output    output file for proof
-  --proofId=proofId  proofId to validate
-  --rowId=rowId      row ID to validate
+  -v, --verbose          increased logging verbosity
+  --config=config        config file location
+  --generateCertificate  Include PDF certificate with row proof
+  --output=output        output file for proof
+  --proofId=proofId      proofId to validate
+  --rowId=rowId          row ID to validate
 
 DESCRIPTION
   Validate compares the data in the database (or in the flashback archive) to the 
@@ -198,7 +199,7 @@ DESCRIPTION
   proof file can serve as an independent proof of the data.
 ```
 
-_See code: [src/commands/validate.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.0/src/commands/validate.js)_
+_See code: [src/commands/validate.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.1/src/commands/validate.js)_
 <!-- commandsstop -->
 
 <!-- build -->
