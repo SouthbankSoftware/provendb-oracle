@@ -1,0 +1,80 @@
+{
+    "metaData": {
+        /* Compulsory: type, key, hash, hashdata */
+        "type": "merkePath",
+        "key": "AAASD+AAMAAAAleAAA",
+        "hash": "HzCjGygWdW9EqR0TIYkpyw2nOwVg7XxjxvpuTajQ+EE=",
+        "hashData": ["AAASD+AAMAAAAleAAA", 1, "{\"name\":\"A Name\",\"Date\":\"A Date\"}", "jdfksljfdskfsdioweljdslfsdjlewowefsdfjl", "2021-07-01T18:42:21.000Z"]
+    },
+    "Proof": {
+        "id": "3270f6ac833b25ddbd3540c4aac20e61efe109eea84a2fd9e2bb241119c960bf:nfOxiLZq8ZRmzT0RYJKSJ",
+        "anchorType": "HEDERA",
+        "batchId": "nfOxiLZq8ZRmzT0RYJKSJ",
+        "status": "CONFIRMED",
+        "hash": "e1ba030274142972722966000a9e3479e4ae6c724bca39a84a810078d08648cf",
+        "batchHash": ".....",
+        "blockchainHash": ".....",
+        "format": "CHP_PATH",
+        "metadata": {
+            "txnId": "17a8084cfd5e7a649c6430e5a30e460fbe4665f6c4950b81df3996aca16a211d9624207ac0d9a289f683ae13b49db027",
+            "txnUri": "https://testnet.dragonglass.me/hedera/search?q=17a8084cfd5e7a649c6430e5a30e460fbe4665f6c4950b81df3996aca16a211d9624207ac0d9a289f683ae13b49db027",
+            "blockTime": 1625201096,
+            "blockTimeNano": 601973000,
+            "validStart": "2021-07-02T04:44:47.813590834Z",
+            "operator": "0.0.32921",
+            "transactionFee": 50467,
+            "confirmedByMirror": true
+        },
+        "data": {
+            "@context": "https://w3id.org/chainpoint/v3",
+            "type": "Chainpoint",
+            "hash": "e1ba030274142972722966000a9e3479e4ae6c724bca39a84a810078d08648cf",
+            "hash_id_node": "da023c5c-c895-11e9-a32f-2a2ae2dbcce4",
+            "hash_submitted_node_at": "2021-07-02T04:44:56Z",
+            "hash_id_core": "da023c5c-c895-11e9-a32f-2a2ae2dbcce4",
+            "hash_submitted_core_at": "2021-07-02T04:44:56Z",
+            "branches": [{
+                "label": "rowid_branch",
+                "ops": [{
+                    "r": "1fbe78355ce3da9367d9e1e8a08e49350bdfdd8ceb782687d29e55b5b4502e7b"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "r": "587b06e8aaa1d56bcf84c8c51b26f511550cef4a74dd75cae9f4f0c415e3b3e0"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "l": "f50c25c7955834e85642c4a685cb9d4aefa9732a2b4d7ad6d505ae89f8feffe0"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "l": "c421bd538013e9667cdd0c81e939ce3002915f21e651fc4abcaf0800b0e6f124"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "r": "0854ae2a2b1340c24fffeb39a9918ff9ff9648cce695c452b5d01af42a048894"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "r": "402ce4efb72779250b6c50682023f39333416b3b2d1b20e7bdaf460b71f498ee"
+                }, {
+                    "op": "sha-256"
+                }, {
+                    "r": "c295287cf6b8d406fb4cf211bb59ef6486894bd07868906f8685770733e84e33"
+                }, {
+                    "op": "sha-256"
+                }],
+                "branches": [{
+                    "label": "pdb_hedera_anchor_branch",
+                    "ops": [{
+                        "anchors": [{
+                            "type": "cal",
+                            "anchor_id": "17a8084cfd5e7a649c6430e5a30e460fbe4665f6c4950b81df3996aca16a211d9624207ac0d9a289f683ae13b49db027",
+                            "uris": ["https://anchor.proofable.io/verify/hedera/17a8084cfd5e7a649c6430e5a30e460fbe4665f6c4950b81df3996aca16a211d9624207ac0d9a289f683ae13b49db027"]
+                        }]
+                    }]
+                }]
+            }]
+        }
+    }
+}

@@ -41,14 +41,18 @@ module.exports = {
     validateBlockchainHash: async (anchorType, txnId, expectedValue, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
+            log.trace('validatBlockchainHash');
         }
         let hashOut;
         // TODO: mainnet anchor support
         if (anchorType === 'ETH') {
-            hashOut = await module.exports.lookupEthTxn(txnId, verbose = false);
+            hashOut = await module.exports.lookupEthTxn(txnId, verbose);
             log.trace('txnOut ', hashOut);
         } else if (anchorType === 'HEDERA') {
-            hashOut = await module.exports.lookupHederaTxn(txnId, verbose = false);
+            hashOut = await module.exports.lookupHederaTxn(txnId, verbose);
+            log.trace('txnOut ', hashOut);
+        } else if (anchorType === 'HEDERA_MAINNET') {
+            hashOut = await module.exports.lookupHederaMainNetTxn(txnId, verbose);
             log.trace('txnOut ', hashOut);
         } else {
             log.warn(`Do not know how to validate ${anchorType} blockchain entries`);
@@ -131,10 +135,31 @@ module.exports = {
                 method: 'get',
                 url: endPoint
             };
+            log.trace(config);
             const response = await axios(config);
             return (response.data.memo);
         } catch (error) {
-            throw new Error(error);
+            log.error(error.message);
+            return (false);
+        }
+    },
+    lookupHederaMainNetTxn: async (transactionId, verbose) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        // Get a document out of the vault
+        const endPoint = 'https://api.kabuto.sh/v1/transaction/' + transactionId;
+        try {
+            const config = {
+                method: 'get',
+                url: endPoint
+            };
+            log.trace(config);
+            const response = await axios(config);
+            return (response.data.memo);
+        } catch (error) {
+            log.error(error.message);
+            return (false);
         }
     },
     // Validate data against an existing proof

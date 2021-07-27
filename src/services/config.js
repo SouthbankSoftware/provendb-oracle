@@ -74,7 +74,7 @@ module.exports = {
             log.setLevel('trace');
         }
         const freeAnchorKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhbmNob3IiLCJleHAiOjE3ODA5ODE5MzMsImp0aSI6ImFhMW5nbnFtNDVpMHFtNHIxMHZmeGp1ZiIsInN1YiI6InUya3o3ZTc1NnNuajF6NTFid2g1bTZuZyIsInNjb3BlIjoiMCIsInJvbGUiOiJGcmVlIn0.MtooMUPuhCnve1DwJKqXQyh324I2x_9_ASH-xSs3j-0';
-        const freeCVKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJwcm92ZW5kb2NzIiwiZXhwIjoxNzgyODc5MjU3LCJqdGkiOiJhdnd4MXEzeXF4dXFhNmtnZHN5YjE3dW4iLCJzdWIiOiJ1Mmt6N2U3NTZzbmoxejUxYndoNW02bmciLCJzY29wZSI6IjMxIiwicm9sZSI6IkZyZWUifQ.1EsJsmk4Q8B9L7vjlr4mbW2QaPtBE40h64DFOLiYXHU';
+        // const freeCVKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJwcm92ZW5kb2NzIiwiZXhwIjoxNzgyODc5MjU3LCJqdGkiOiJhdnd4MXEzeXF4dXFhNmtnZHN5YjE3dW4iLCJzdWIiOiJ1Mmt6N2U3NTZzbmoxejUxYndoNW02bmciLCJzY29wZSI6IjMxIiwicm9sZSI6IkZyZWUifQ.1EsJsmk4Q8B9L7vjlr4mbW2QaPtBE40h64DFOLiYXHU';
         const config = {
             oracleConnection: {
                 connectString: oracleConnection,
@@ -85,8 +85,7 @@ module.exports = {
             dbmsAlert: 'TRUE',
             proofable: {
                 token: freeAnchorKey,
-                endpoint: 'anchor.proofable.io:443',
-                complianceVaultKey: freeCVKey
+                endpoint: 'anchor.proofable.io:443'
             }
         };
 

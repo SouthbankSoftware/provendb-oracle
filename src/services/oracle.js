@@ -51,7 +51,7 @@ const tableDefs = [];
 // TODO: Need to get rid of the tableDefs global.
 let monitorStartTime;
 
-// TODO: include certificate in the row proof
+
 // TODO: Make sure that the data in the proof file can be re-validated
 // TODO: Don't include data in the proof unless on request.
 
@@ -437,6 +437,7 @@ module.exports = {
 
         const key = rowidKey;
         log.trace('Data to be hashed ', row);
+        // TODO: Make sure that the row in the proof file is stringified in the same way
         const hash = crypto.createHash('sha256').update(stringify(row)).digest('base64');
         log.trace('hash ', hash);
         return {
@@ -1227,11 +1228,7 @@ module.exports = {
             const jsonString = JSON.stringify(jsonData);
             if (outputFile) {
                 if (generateCertificate) {
-                    if (!('complianceVaultKey' in config.proofable)) {
-                        log.warn('No Compliance vault key in config file - cannot generate PDF certificates');
-                    } else {
-                        await genProofCertificate(jsonData, certificateFile, config.proofable.complianceVaultKey, verbose);
-                    }
+                    await genProofCertificate(jsonData, certificateFile, config.proofable.token, verbose);
                 }
                 await fs.writeFileSync(jsonFile, jsonString);
                 const zipFile = new AdmZip();

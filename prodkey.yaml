@@ -1,0 +1,9 @@
+oracleConnection:
+  connectString: local
+  user: provendb
+  password: myLongPassword23
+anchorType: HEDERA_MAINNET
+dbmsAlert: 'TRUE'
+proofable:
+  token: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhdWQiOiJhbmNob3IiLCJleHAiOjE3ODUxMDY2MjQsImp0aSI6ImF5Y3VtZGdjbXVweTc4eng3YzZwdWo4MyIsInN1YiI6InV2cHgzYjVjNXV2bXduOTRxYTd2NG5kciIsInNjb3BlIjoiMCIsInJvbGUiOiJQYWlkIn0.G3UpeCoV-jrH6adGm8OeF958KUVLMTLQrBBOGPmdnXc
+  endpoint: 'anchor.proofable.io:443'
