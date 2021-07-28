@@ -335,8 +335,8 @@ module.exports = {
             if (ignoreErrors === false) {
                 log.error(error.message, ' while executing ', sqlText);
                 throw (error);
-            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum)) ||
-                ignoreErrors === error.errorNum || ignoreErrors === true) {
+            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum))
+                || ignoreErrors === error.errorNum || ignoreErrors === true) {
                 log.info(error.message, ' handled while executing ', sqlText);
             } else {
                 log.error(error.message, ' while executing ', sqlText);
@@ -537,7 +537,7 @@ module.exports = {
                 throw new Error('Tables should be defined in User.TableName format');
             }
 
-            tableDefs[table] = await module.exports.check1table(splitTable[0], splitTable[1]);
+            tableDefs[table] = await module.exports.getTableDef(splitTable[0], splitTable[1]);
         }
         log.trace('tableDefs', tableDefs);
     },
@@ -557,7 +557,7 @@ module.exports = {
     },
 
     // Check a single table
-    check1table: async (user, table) => {
+    getTableDef: async (user, table) => {
         log.trace('Checking ', user, '.', table);
         const tableData = {};
         tableData.tableOwner = user;
@@ -635,16 +635,19 @@ module.exports = {
     },
 
     // Get table data as it currently exists
-    getTableDataNoScn: async (tableName, where) => {
+    getTableDataNoScn: async (tableName, where, columnList = '*') => {
         let result;
         let whereClause = '';
 
         if (where) {
             whereClause = 'WHERE ' + where;
         }
+        if (columnList === '*') {
+            columnList = 'C.*';
+        }
 
         const sqlText = `
-        SELECT rowidtochar(C.ROWID) as row_rowid,C.*  
+        SELECT rowidtochar(C.ROWID) as row_rowid,${columnList}  
             FROM ${tableName} C ${whereClause}
         `;
         log.trace(sqlText);
@@ -831,7 +834,7 @@ module.exports = {
         for (let tableNo = 0; tableNo < tableNames.length; tableNo++) {
             const tableDef = tableDefs[tableNames[tableNo]];
             log.trace('Processing ', tableDef);
-            const tableData = await module.exports.process1TableChanges(tableDef, false, null, true, null);
+            const tableData = await module.exports.getTableData(tableDef, false, null, true, null);
             if (Object.keys(tableData.keyValues).length > 0) {
                 const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, false);
 
@@ -851,7 +854,7 @@ module.exports = {
     },
 
     // Save a proof to the Proofable control table
-    saveproofToDB: async (treeWithProof, tableOwner, tableName, tableData, proofType, whereclause, includeScn) => {
+    saveproofToDB: async (treeWithProof, tableOwner, tableName, tableData, proofType, whereclause, includeScn, columnList = '*') => {
         try {
             if (debug) {
                 console.log(JSON.stringify(treeWithProof));
@@ -869,7 +872,8 @@ module.exports = {
                 proofType,
                 whereclause,
                 currentScn: tableData.currentScn,
-                includeScn
+                includeScn,
+                columnList
             };
             const insOut = await oraConnection.execute(
                 `INSERT INTO provendbcontrol 
@@ -930,10 +934,15 @@ module.exports = {
     },
 
     // Process changes for a single table
-    process1TableChanges: async (tableDef, adHoc, where, includeScn, scnValue) => {
+    getTableData: async (tableDef, adHoc, where, includeScn, scnValue, columnList = '*', keyColumns = 'ROWID', verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
         log.info('Processing ', ' ', tableDef.tableOwner, '.', tableDef.tableName);
-        log.info(' Where: ', where);
+        log.trace(' Where: ', where);
         log.trace('IncludeSCN:', includeScn);
+        log.trace('ColumnList:', columnList);
+        log.trace('keyColumns:', keyColumns);
 
         const tableName = `${tableDef.tableOwner}.${tableDef.tableName}`;
 
@@ -955,7 +964,7 @@ module.exports = {
         if (adHoc && !includeScn) {
             // We always get SCN values unless an adhoc request has been made without
             // SCNs
-            rawTableData = await module.exports.getTableDataNoScn(tableName, where);
+            rawTableData = await module.exports.getTableDataNoScn(tableName, where, columnList);
         } else {
             rawTableData = await module.exports.getTableDataScn(
                 tableName,
@@ -1353,7 +1362,7 @@ module.exports = {
                 const proof = await module.exports.getproofFromDB(proofId);
                 // Get data corresponding to proof
                 log.trace('Loading table data');
-                const tableData = await module.exports.process1TableChanges(tableDef, 'adhoc', where, metadata.includeScn, metadata.currentScn);
+                const tableData = await module.exports.getTableData(tableDef, 'adhoc', where, metadata.includeScn, metadata.currentScn, metadata.columnList);
                 log.trace('Validating table data against proof');
                 const proofMetadata = {
                     tableOwner: tableDef.tableOwner,
@@ -1411,7 +1420,7 @@ module.exports = {
         const prooftype = row[6];
         const where = row[7];
         const metadata = JSON.parse(row[8]);
-        const tableDef = await module.exports.check1table(userName, tableName);
+        const tableDef = await module.exports.getTableDef(userName, tableName);
         log.trace(tableDef);
         return {
             tableDef,

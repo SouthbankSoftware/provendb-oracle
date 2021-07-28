@@ -8,8 +8,8 @@ const {
 const log = require('simple-node-logger').createSimpleLogger();
 const {
     connectToOracle,
-    check1table,
-    process1TableChanges,
+    getTableDef,
+    getTableData,
     saveproofToDB,
     createProofFile
 } = require('../services/oracle');
@@ -32,22 +32,34 @@ class AnchorCommand extends Command {
             } = this.parse(AnchorCommand);
 
             let whereClause;
+            let columnList = '*';
+
             const {
                 tables,
                 where,
                 includeRowIds,
                 includeScn,
-                verbose
+                verbose,
+                columns
             } = flags;
             const outputFile = flags.validate;
             if (where) {
                 whereClause = where.join(' ');
             }
 
+
+            if (columns) {
+                columnList = columns;
+            }
             log.info(`Anchoring Tables: ${tables}`);
 
             if (verbose) {
                 log.setLevel('trace');
+            }
+
+            if (includeScn && columnList) {
+                log.warn('Column List currently ignored when SCN is specified');
+                // TODO: Allow column lists and includeScn flags
             }
             const config = await getConfig(flags.config);
 
@@ -68,10 +80,10 @@ class AnchorCommand extends Command {
                 }
                 const userName = splitTableName[0];
                 const tableName = splitTableName[1];
-                const tableDef = await check1table(userName, tableName);
+                const tableDef = await getTableDef(userName, tableName);
                 if (tableDef.exists) {
                     log.trace('Processing ', tableDef);
-                    const tableData = await process1TableChanges(tableDef, 'adhoc', whereClause, includeScn);
+                    const tableData = await getTableData(tableDef, true, whereClause, includeScn, null, columnList);
                     const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, verbose);
                     if (debug) {
                         console.log(treeWithProof);
@@ -86,7 +98,8 @@ class AnchorCommand extends Command {
                         tableData,
                         'AdHoc',
                         whereClause,
-                        includeScn
+                        includeScn,
+                        columnList
                     );
                     log.info(`Proof ${proofId} created and stored to DB`);
                     if (flags.validate) {
@@ -114,6 +127,12 @@ AnchorCommand.flags = {
         description: 'tables to anchor',
         required: true,
         multiple: true,
+    }),
+    columns: flags.string({
+        string: 'c',
+        description: 'columns to be included in the proof',
+        required: false,
+        multiple: false,
     }),
     where: flags.string({
         string: 'w',

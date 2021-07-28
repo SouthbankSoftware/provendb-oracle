@@ -62,6 +62,16 @@ describe('provendb-oracle Anchor tests', () => {
         expect(output).toEqual(expect.stringMatching('Proof written to testProof.proof'));
         expect(output).toEqual(expect.stringMatching('INFO  100 keys'));
     });
+
+    test('anchor table column List', async () => {
+        jest.setTimeout(120000);
+        const output = await provendbOracle(`anchor --config=testConfig.yaml --tables=${demoSchema}.CONTRACTSTABLEFBDA --validate=testProof.proof --where="CONTRACTID<=10" --columnList="CONTRACTID,CONTRACTDATA"  `);
+        expect(output).not.toEqual(expect.stringMatching('ERROR'));
+        expect(output).toEqual(expect.stringMatching('Anchored to'));
+        expect(output).toEqual(expect.stringMatching('Proof written to testProof.proof'));
+        expect(output).toEqual(expect.stringMatching('INFO  10 keys'));
+    });
+
 });
 
 
