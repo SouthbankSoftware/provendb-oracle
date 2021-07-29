@@ -168,16 +168,8 @@ module.exports = {
             log.setLevel('trace');
         }
         let goodProof = false;
-        const builder = new merkle.Builder('sha-256');
-        const keyValues = [];
-        Object.keys(inputKeyValues).sort().forEach((key) => {
-            keyValues.push({
-                key,
-                value: Buffer.from(inputKeyValues[key])
-            });
-        });
-        builder.addBatch(keyValues);
-        const tree = builder.build();
+
+        const tree = makeTree(inputKeyValues, verbose);
         const calculatedRoot = tree.getRoot();
         const proofRoot = proof.proofs[0].hash;
         if (calculatedRoot === proofRoot) {
@@ -185,6 +177,7 @@ module.exports = {
             goodProof = true;
         } else {
             log.error(`FAIL: proof hash does not match data hash proof: ${proofRoot}, data: ${calculatedRoot}`);
+            console.log(tree);
             goodProof = false;
         }
         // TODO: Should compress this file
@@ -205,26 +198,16 @@ module.exports = {
         if (verbose) {
             log.setLevel('trace');
         }
+        const debug = false;
         try {
             log.info('--> Anchoring data to ', anchorChainType);
             log.info(Object.keys(data.keyValues).length, ' keys');
-            const builder = new merkle.Builder('sha-256');
+
             // TODO: Use dev anchor optionally not local anchor
             log.trace('token ', anchorToken);
             const myAnchor = anchor.connect(anchor.withAddress('anchor.proofable.io:443'), anchor.withCredentials(anchorToken));
             // const myAnchor = anchor.connect(anchor.withAddress('anchor.dev.proofable.io:443'));
-
-            const keyValues = [];
-            Object.keys(data.keyValues).sort().forEach((key) => {
-                keyValues.push({
-                    key,
-                    value: Buffer.from(data.keyValues[key])
-                });
-            });
-            builder.addBatch(keyValues);
-            const tree = builder.build();
-
-
+            const tree = makeTree(data.keyValues, verbose);
             const anchoredProof = await myAnchor.submitProof(tree.getRoot(),
                 anchor.submitProofWithAnchorType(anchor.Anchor.Type[anchorChainType]),
                 anchor.submitProofWithAwaitConfirmed(true));
@@ -234,6 +217,10 @@ module.exports = {
             if (debug) {
                 console.log('=======');
                 console.log(tree);
+                console.log('=======');
+                console.log(tree.getRoot());
+                console.log('=======');
+                console.log(anchoredProof);
                 console.log('=======');
             }
             log.info('Anchored to ', anchoredProof.metadata.txnUri);
@@ -312,6 +299,34 @@ module.exports = {
         }
     }
 };
+
+function makeTree(inputkeyValues, verbose) {
+    if (verbose) {
+        log.setLevel('trace');
+    }
+    const debug = false;
+    log.trace('makeTree');
+    const builder = new merkle.Builder('sha-256');
+    const keyValues = [];
+    const keys = Object.keys(inputkeyValues);
+    keys.sort().forEach((key) => {
+        keyValues.push({
+            key,
+            value: Buffer.from(inputkeyValues[key])
+        });
+    });
+    builder.addBatch(keyValues);
+    const tree = builder.build();
+    if (debug) {
+        console.log('-----');
+        console.log(keys[0]);
+        console.log(inputkeyValues[keys[0]]);
+        console.log('-----');
+        console.log(tree);
+        console.log('-----');
+    }
+    return tree;
+}
 
 function findVal(object, key) {
     let value;

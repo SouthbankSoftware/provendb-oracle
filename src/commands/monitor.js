@@ -9,6 +9,7 @@ const {
     processTableChanges,
     checkTables,
     monitorSleep,
+    processRequests
 } = require('../services/oracle');
 const {
     connectToProofable
@@ -29,7 +30,8 @@ class MonitorCommand extends Command {
                 tables,
                 interval,
                 maxTime,
-                verbose
+                verbose,
+                monitorRequests
             } = flags;
 
             // Load Config
@@ -39,12 +41,14 @@ class MonitorCommand extends Command {
                 log.setLevel('trace');
                 log.trace(config);
             }
-            if (!tables) {
-                throw new Error('Must specify --tables option');
+            if (!tables && !monitorRequests) {
+                throw new Error('Must specify either the --tables or --monitorRequests option');
             }
             // Establish connection:
             await connectToOracle(config, verbose);
-            await checkTables(tables);
+            if (tables) {
+                await checkTables(tables);
+            }
             log.info(`Monitoring with ${interval} s interval.`);
             // eslint-disable-next-line no-constant-condition
 
@@ -59,7 +63,13 @@ class MonitorCommand extends Command {
                     monitorLoop = false;
                     break;
                 }
-                await processTableChanges(config, tables);
+                if (tables) {
+                    await processTableChanges(config, tables);
+                }
+                if (monitorRequests) {
+                    log.info('Looking for new requests in the provendbRequests table');
+                    await processRequests(verbose);
+                }
                 await monitorSleep(interval, config);
             }
         } catch (error) {
@@ -95,8 +105,13 @@ MonitorCommand.flags = {
     tables: flags.string({
         string: 't',
         description: 'tables to anchor',
-        required: true,
+        required: false,
         multiple: true,
+    }),
+    monitorRequests: flags.boolean({
+        char: 'r',
+        description: 'monitor requests in the provendbRequests table',
+        default: false
     }),
     config: flags.string({
         string: 'c',

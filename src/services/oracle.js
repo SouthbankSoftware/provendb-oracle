@@ -67,6 +67,7 @@ module.exports = {
                 user,
                 password,
             });
+            oracledb.fetchAsString = [oracledb.CLOB];
             log.trace('Connected to Oracle');
             log.info('SQL TRACE is ', process.env.SQL_TRACE);
             if (verbose || ('SQL_TRACE' in process.env && process.env.SQL_TRACE === 'TRUE')) {
@@ -218,6 +219,42 @@ module.exports = {
                 `CREATE INDEX provendbcontrolrowids_i1 
                     ON provendbcontrolrowids(rowid_scn)`
             );
+            sqls.push(
+                'CREATE SEQUENCE provendbSequence'
+            );
+            sqls.push(
+                `CREATE TABLE provendbRequests (
+                    id NUMBER   DEFAULT provendbSequence.nextval,
+                    requestType VARCHAR2(12) DEFAULT('ANCHOR'),
+                    requestJSON VARCHAR2(4000) ,
+                    status      VARCHAR2(12) DEFAULT('NEW'),
+                    statusDate  DATE DEFAULT(SYSDATE),
+                    messages    VARCHAR(4000),
+                    CONSTRAINT  "requestIsJSON" CHECK (requestJSON IS JSON),
+                    CONSTRAINT  provendbRequests_pk PRIMARY KEY (id))`
+            );
+            sqls.push(
+                'CREATE INDEX provendbRequests_i1 ON provendbRequests(status,statusDate)'
+            );
+            sqls.push(
+                `CREATE OR REPLACE TRIGGER provendbRequests_trg 
+                    AFTER INSERT  ON provendbRequests
+                    BEGIN 
+                        DBMS_ALERT.SIGNAL('provendb_alert','provendbrequests table modified'); 
+                    END; `
+            );
+            sqls.push(
+                `CREATE OR REPLACE FUNCTION anchorRequest(l_requestJSON provendbRequests.requestJSON%type)
+                        RETURN provendbRequests.id%TYPE IS 
+                        l_id provendbRequests.id%TYPE;
+                    BEGIN
+                        INSERT INTO provendbRequests(requestJSON) 
+                            VALUES(l_requestJSON)
+                            returning id INTO l_id;
+                        COMMIT;
+                        RETURN(l_id);
+                    END;`
+            );
 
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(oraConnection, sqls[s], false, verbose);
@@ -256,7 +293,7 @@ module.exports = {
                       contractId   NUMBER PRIMARY KEY,
                       metaData     VARCHAR2(4000)
                         CHECK (metaData IS JSON),
-                      contractData VARCHAR2(4000) NOT NULL,
+                      contractData CLOB NOT NULL,
                       mytimestamp TIMESTAMP
                     )`
             );
@@ -335,8 +372,8 @@ module.exports = {
             if (ignoreErrors === false) {
                 log.error(error.message, ' while executing ', sqlText);
                 throw (error);
-            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum))
-                || ignoreErrors === error.errorNum || ignoreErrors === true) {
+            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum)) ||
+                ignoreErrors === error.errorNum || ignoreErrors === true) {
                 log.info(error.message, ' handled while executing ', sqlText);
             } else {
                 log.error(error.message, ' while executing ', sqlText);
@@ -371,6 +408,7 @@ module.exports = {
                 `GRANT ALTER SESSION to ${provendbUser} `,
                 `GRANT FLASHBACK ANY TABLE  TO ${provendbUser} `,
                 `GRANT execute_catalog_role TO ${provendbUser} `,
+                `GRANT execute ON dbms_alert  TO ${provendbUser} `,
                 `GRANT execute ON dbms_Session to ${provendbUser} `
             ];
             for (let s = 0; s < sqls.length; s++) {
@@ -474,7 +512,9 @@ module.exports = {
             let minStartTime = new Date().getTime();
             let maxStartScn = currentScn;
             let minStartScn = currentScn;
+            let rowNo = 0;
             result.rows.forEach((row) => {
+                rowNo += 1;
                 let key;
                 let data;
                 // log.trace('max/min SCN ', maxStartScn, ',', minStartScn);
@@ -502,11 +542,13 @@ module.exports = {
                     data = row.slice(0, row.length - 3);
                     keyTimeStamps[key] = versionStartTime;
                 }
-                log.trace('data to be hashed:', data);
+
                 const hash = crypto.createHash('sha256').update(stringify(data)).digest('base64');
                 keyValues[key] = hash;
-
-                log.trace('key: ', key, ' hash:', hash);
+                if (rowNo === 1) {
+                    log.trace('data to be hashed:', data);
+                    log.trace('key: ', key, ' hash:', hash);
+                }
             });
             return {
                 keyValues,
@@ -852,7 +894,38 @@ module.exports = {
             }
         }
     },
-
+    // Process requests in the provendbRequests table
+    processRequests: async (verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        while (true) {
+            const querySQL = `SELECT id,requesttype,requestjson FROM provendbrequests 
+                         WHERE ID =(SELECT MIN(ID)
+                                        FROM PROVENDBREQUESTS
+                                        WHERE STATUS = 'NEW')
+                            FOR UPDATE WAIT 120`;
+            log.trace(querySQL);
+            const request = await oraConnection.execute(querySQL);
+            log.trace(request);
+            if (request.rows.length === 0) {
+                oraConnection.commit;
+                break;
+            } else {
+                log.trace(request);
+                log.info('Processing request ');
+                const id = request.rows[0][0];
+                const requestType = request.rows[0][1];
+                const requestJson = JSON.parse(request.rows[0][2]);
+                log.trace(id, requestType, requestJson);
+                if (requestType === 'ANCHOR') {
+                    await processAnchorRequest(id, requestJson, verbose);
+                }
+                oraConnection.commit;
+                break;
+            }
+        }
+    },
     // Save a proof to the Proofable control table
     saveproofToDB: async (treeWithProof, tableOwner, tableName, tableData, proofType, whereclause, includeScn, columnList = '*') => {
         try {
@@ -935,7 +1008,8 @@ module.exports = {
 
     // Process changes for a single table
     getTableData: async (tableDef, adHoc, where, includeScn, scnValue, columnList = '*', keyColumns = 'ROWID', verbose = false) => {
-        if (verbose) {
+        const debug = false;
+        if (verbose || debug) {
             log.setLevel('trace');
         }
         log.info('Processing ', ' ', tableDef.tableOwner, '.', tableDef.tableName);
@@ -1128,7 +1202,7 @@ module.exports = {
             },
         };
         try {
-            oracledb.fetchAsString = [oracledb.CLOB];
+
             const data = await oraConnection.execute(
                 `
                 SELECT proof, owner_name, table_name,
@@ -1471,4 +1545,10 @@ async function getRowDataNoScn(tableOwnerName, therowid, verbose = false) {
         therowid,
     });
     return (result);
+}
+
+async function processAnchorRequest(id, requestJson, verbose) {
+    if (verbose) {
+        log.setLevel('trace');
+    }
 }
