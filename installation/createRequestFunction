@@ -1,0 +1,10 @@
+CREATE OR REPLACE FUNCTION anchorRequest(l_requestJSON provendbRequests.requestJSON%type)
+                        RETURN provendbRequests.id%TYPE IS 
+                        l_id provendbRequests.id%TYPE;
+                    BEGIN
+                        INSERT INTO provendbRequests(requestJSON) 
+                            VALUES(l_requestJSON)
+                            returning id INTO l_id;
+                        COMMIT;
+                        RETURN(l_id);
+                    END;

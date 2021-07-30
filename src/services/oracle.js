@@ -85,7 +85,7 @@ module.exports = {
             return oraConnection;
         } catch (error) {
             log.error(error.message, ' while connecting to oracle');
-            throw (error);
+            throw Error(error);
         }
     },
     // Connect to Oracle from config file
@@ -104,7 +104,7 @@ module.exports = {
             return oraConnection;
         } catch (error) {
             log.error(error.message, ' while connecting to oracle');
-            throw (error);
+            throw new Error(error);
         }
     },
 
@@ -244,16 +244,25 @@ module.exports = {
                     END; `
             );
             sqls.push(
-                `CREATE OR REPLACE FUNCTION anchorRequest(l_requestJSON provendbRequests.requestJSON%type)
-                        RETURN provendbRequests.id%TYPE IS 
-                        l_id provendbRequests.id%TYPE;
-                    BEGIN
-                        INSERT INTO provendbRequests(requestJSON) 
-                            VALUES(l_requestJSON)
-                            returning id INTO l_id;
-                        COMMIT;
-                        RETURN(l_id);
-                    END;`
+                `CREATE OR REPLACE   FUNCTION f_anchorRequest(tableName varchar2,columnList varchar2,whereclause varchar2)
+                RETURN provendbRequests.id%TYPE IS 
+                l_id provendbRequests.id%TYPE;
+                l_json varchar2(4000);
+            BEGIN
+                l_json:='{"table":"'||tableName||'"' ;
+                if columnList is not null then 
+                    l_json:=l_json||',"columns":"'||columnList||'"';
+                end if;
+                if whereclause is not null then 
+                    l_json:=l_json||',"where":"'||whereclause||'"';
+                end if;
+                l_json:=l_json||'}';
+                INSERT INTO provendbRequests(requestJSON) 
+                    VALUES(l_json)
+                    returning id INTO l_id;
+                COMMIT;
+                RETURN(l_id);
+            END;`
             );
 
             for (let s = 0; s < sqls.length; s++) {
@@ -264,7 +273,48 @@ module.exports = {
             throw (error);
         }
     },
-
+    anchor1Table: async (config, userNameTableName, whereClause, columnList, validate = false, includeScn = false, verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        const splitTableName = userNameTableName.split('.');
+        if (splitTableName.length != 2) {
+            const errm = 'Table Definitions should be in user.table format';
+            log.error(errm);
+            return;
+        }
+        const userName = splitTableName[0];
+        const tableName = splitTableName[1];
+        const tableDef = await module.exports.getTableDef(userName, tableName, verbose);
+        if (tableDef.exists) {
+            log.trace('Processing ', tableDef);
+            const tableData = await module.exports.getTableData(tableDef, true, whereClause, includeScn, null, columnList);
+            const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, verbose);
+            if (debug) {
+                console.log(treeWithProof);
+                console.log(Object.keys(treeWithProof));
+            }
+            const proof = treeWithProof.proofs[0];
+            const proofId = proof.id;
+            await module.exports.saveproofToDB(
+                treeWithProof,
+                tableDef.tableOwner,
+                tableDef.tableName,
+                tableData,
+                'AdHoc',
+                whereClause,
+                includeScn,
+                columnList
+            );
+            log.info(`Proof ${proofId} created and stored to DB`);
+            if (validate) {
+                await module.exports.createProofFile(treeWithProof, outputFile, includeRowIds, verbose);
+                log.info('Proof written to ', outputFile);
+            }
+        } else {
+            throw new Error('Table ' + userNameTableName + ' cannot be accessed');
+        }
+    },
     createDemoTables: async (connectString, provendbUser, provendbPassword, verbose = false) => {
         log.info('Creating demo tables');
         if (verbose) {
@@ -576,7 +626,7 @@ module.exports = {
             const table = tableList[ti];
             const splitTable = table.split('.');
             if (splitTable.length !== 2) {
-                throw new Error('Tables should be defined in User.TableName format');
+                throw ('Tables should be defined in User.TableName format');
             }
 
             tableDefs[table] = await module.exports.getTableDef(splitTable[0], splitTable[1]);
@@ -599,7 +649,10 @@ module.exports = {
     },
 
     // Check a single table
-    getTableDef: async (user, table) => {
+    getTableDef: async (user, table, verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
         log.trace('Checking ', user, '.', table);
         const tableData = {};
         tableData.tableOwner = user;
@@ -619,7 +672,9 @@ module.exports = {
             log.trace(tableData);
         } else {
             tableData.exists = false;
+            log.error('Table ', user, '.', table, ' Cannot be accessed');
         }
+        log.info(tableData);
         return tableData;
     },
 
@@ -894,13 +949,14 @@ module.exports = {
             }
         }
     },
-    // Process requests in the provendbRequests table
-    processRequests: async (verbose = false) => {
+    // Process Invalid JSON ins in the provendbRequests table
+    processRequests: async (config, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
         while (true) {
-            const querySQL = `SELECT id,requesttype,requestjson FROM provendbrequests 
+            const querySQL = `
+                        SELECT id,requesttype,requestjson FROM provendbrequests 
                          WHERE ID =(SELECT MIN(ID)
                                         FROM PROVENDBREQUESTS
                                         WHERE STATUS = 'NEW')
@@ -909,7 +965,7 @@ module.exports = {
             const request = await oraConnection.execute(querySQL);
             log.trace(request);
             if (request.rows.length === 0) {
-                oraConnection.commit;
+                oraConnection.commit; // release lock
                 break;
             } else {
                 log.trace(request);
@@ -919,7 +975,7 @@ module.exports = {
                 const requestJson = JSON.parse(request.rows[0][2]);
                 log.trace(id, requestType, requestJson);
                 if (requestType === 'ANCHOR') {
-                    await processAnchorRequest(id, requestJson, verbose);
+                    await processAnchorRequest(config, id, requestJson, verbose);
                 }
                 oraConnection.commit;
                 break;
@@ -1202,7 +1258,6 @@ module.exports = {
             },
         };
         try {
-
             const data = await oraConnection.execute(
                 `
                 SELECT proof, owner_name, table_name,
@@ -1547,8 +1602,54 @@ async function getRowDataNoScn(tableOwnerName, therowid, verbose = false) {
     return (result);
 }
 
-async function processAnchorRequest(id, requestJson, verbose) {
+async function processAnchorRequest(config, id, requestJson, verbose) {
     if (verbose) {
         log.setLevel('trace');
     }
+    log.trace("json: ",requestJson)
+    let where;
+    let columns = '*';
+    if (!('table' in requestJson)) {
+        await invalidateRequest(id, 'Must specify table argument in request');
+        return;
+    }
+    try {
+        if ('columns' in requestJson) {
+            columns = requestJson.columns;
+        }
+        if ('where' in requestJson) {
+            where = requestJson.where;
+        }
+        await module.exports.anchor1Table(config, requestJson.table, where, columns, false, false, verbose);
+        await completeRequest(id);
+    } catch (error) {
+        log.error('Error processing request: ', error.message);
+        await invalidateRequest(id, error.message);
+    }
+}
+
+async function invalidateRequest(id, message) {
+    await oraConnection.execute(`
+        UPDATE provendbrequests 
+           SET status='FAILED',
+               messages=:message,
+               statusdate=sysdate
+         WHERE ID=:id `, {
+        id,
+        message
+    });
+    oraConnection.commit;
+    log.error(`Request ${id} failed: ${message}`);
+}
+
+async function completeRequest(id) {
+    await oraConnection.execute(`
+        UPDATE provendbrequests 
+           SET status='SUCCESS',
+               statusdate=sysdate
+         WHERE ID=:id `, {
+        id
+    });
+    oraConnection.commit;
+    log.info('Request ', id, ' succeeded');
 }

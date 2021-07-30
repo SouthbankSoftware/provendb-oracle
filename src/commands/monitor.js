@@ -68,7 +68,7 @@ class MonitorCommand extends Command {
                 }
                 if (monitorRequests) {
                     log.info('Looking for new requests in the provendbRequests table');
-                    await processRequests(verbose);
+                    await processRequests(config,verbose);
                 }
                 await monitorSleep(interval, config);
             }

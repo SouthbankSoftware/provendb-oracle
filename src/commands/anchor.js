@@ -11,7 +11,8 @@ const {
     getTableDef,
     getTableData,
     saveproofToDB,
-    createProofFile
+    createProofFile,
+    anchor1table
 } = require('../services/oracle');
 const {
     anchorData
