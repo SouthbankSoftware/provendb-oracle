@@ -26,7 +26,7 @@ class InstallCommand extends Command {
             const {
                 flags
             } = this.parse(InstallCommand);
-            let {
+            const {
                 verbose,
                 oracleConnect,
                 provendbUser,
@@ -45,10 +45,9 @@ class InstallCommand extends Command {
             let loginMethod = 'SYS';
 
             let effectiveDbaPassword = dbaPassword;
-
+            let parsedSysPassword=flags.sysPassword;
             if (!flags.sysPassword && !flags.dbaUserName && !flags.dbaPassword) {
-
-                sysPassword = await passwordPrompt('Enter SYS password: ', {
+                parsedSysPassword = await passwordPrompt('Enter SYS password: ', {
                     method: 'mask'
                 });
             } else if (flags.dbaUserName) {
@@ -65,7 +64,7 @@ class InstallCommand extends Command {
             let dbaConnection;
             if (loginMethod === 'SYS') {
                 log.trace('Connecting to sys');
-                dbaConnection = await connectToOracleSYS(oracleConnect, sysPassword, verbose);
+                dbaConnection = await connectToOracleSYS(oracleConnect, parsedSysPassword, verbose);
             } else {
                 log.trace('Connecting to DBA');
                 dbaConnection = await connectToOracleDirect(oracleConnect, dbaUserName, effectiveDbaPassword, verbose);

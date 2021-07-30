@@ -273,7 +273,7 @@ module.exports = {
             throw (error);
         }
     },
-    anchor1Table: async (config, userNameTableName, whereClause, columnList, validate = false, includeScn = false, verbose = false) => {
+    anchor1Table: async (config, userNameTableName, whereClause, columnList, validate = false, includeScn = false, includeRowIds = false, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
@@ -308,8 +308,8 @@ module.exports = {
             );
             log.info(`Proof ${proofId} created and stored to DB`);
             if (validate) {
-                await module.exports.createProofFile(treeWithProof, outputFile, includeRowIds, verbose);
-                log.info('Proof written to ', outputFile);
+                await module.exports.createProofFile(treeWithProof, validate, includeRowIds, verbose);
+                log.info('Proof written to ', validate);
             }
         } else {
             throw new Error('Table ' + userNameTableName + ' cannot be accessed');
@@ -422,8 +422,8 @@ module.exports = {
             if (ignoreErrors === false) {
                 log.error(error.message, ' while executing ', sqlText);
                 throw (error);
-            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum)) ||
-                ignoreErrors === error.errorNum || ignoreErrors === true) {
+            } else if ((Array.isArray(ignoreErrors) && ignoreErrors.includes(error.errorNum))
+                || ignoreErrors === error.errorNum || ignoreErrors === true) {
                 log.info(error.message, ' handled while executing ', sqlText);
             } else {
                 log.error(error.message, ' while executing ', sqlText);
@@ -626,7 +626,7 @@ module.exports = {
             const table = tableList[ti];
             const splitTable = table.split('.');
             if (splitTable.length !== 2) {
-                throw ('Tables should be defined in User.TableName format');
+                throw new Error('Tables should be defined in User.TableName format');
             }
 
             tableDefs[table] = await module.exports.getTableDef(splitTable[0], splitTable[1]);
@@ -1606,7 +1606,7 @@ async function processAnchorRequest(config, id, requestJson, verbose) {
     if (verbose) {
         log.setLevel('trace');
     }
-    log.trace("json: ",requestJson)
+    log.trace('json: ', requestJson);
     let where;
     let columns = '*';
     if (!('table' in requestJson)) {
@@ -1620,7 +1620,8 @@ async function processAnchorRequest(config, id, requestJson, verbose) {
         if ('where' in requestJson) {
             where = requestJson.where;
         }
-        await module.exports.anchor1Table(config, requestJson.table, where, columns, false, false, verbose);
+        // TODO: Refactor this to take named parameters
+        await module.exports.anchor1Table(config, requestJson.table, where, columns, false, false, false, verbose);
         await completeRequest(id);
     } catch (error) {
         log.error('Error processing request: ', error.message);

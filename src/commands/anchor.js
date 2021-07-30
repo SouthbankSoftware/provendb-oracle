@@ -12,7 +12,8 @@ const {
     getTableData,
     saveproofToDB,
     createProofFile,
-    anchor1table
+    anchor1table,
+    anchor1Table
 } = require('../services/oracle');
 const {
     anchorData
@@ -73,41 +74,8 @@ class AnchorCommand extends Command {
             // tables.forEach(async (userNameTableName) => {
             for (let ti = 0; ti < tables.length; ti++) {
                 const userNameTableName = tables[ti];
-                const splitTableName = userNameTableName.split('.');
-                if (splitTableName.length != 2) {
-                    const errm = 'Table Definitions should be in user.table format';
-                    log.error(errm);
-                    return;
-                }
-                const userName = splitTableName[0];
-                const tableName = splitTableName[1];
-                const tableDef = await getTableDef(userName, tableName);
-                if (tableDef.exists) {
-                    log.trace('Processing ', tableDef);
-                    const tableData = await getTableData(tableDef, true, whereClause, includeScn, null, columnList);
-                    const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, verbose);
-                    if (debug) {
-                        console.log(treeWithProof);
-                        console.log(Object.keys(treeWithProof));
-                    }
-                    const proof = treeWithProof.proofs[0];
-                    const proofId = proof.id;
-                    await saveproofToDB(
-                        treeWithProof,
-                        tableDef.tableOwner,
-                        tableDef.tableName,
-                        tableData,
-                        'AdHoc',
-                        whereClause,
-                        includeScn,
-                        columnList
-                    );
-                    log.info(`Proof ${proofId} created and stored to DB`);
-                    if (flags.validate) {
-                        await createProofFile(treeWithProof, outputFile, includeRowIds, verbose);
-                        log.info('Proof written to ', outputFile);
-                    }
-                }
+                await anchor1Table(config, userNameTableName, whereClause, columnList, flags.validate, includeScn, includeRowIds, verbose);
+
             }
         } catch (error) {
             log.error('Failed to anchor tables:');
@@ -116,6 +84,7 @@ class AnchorCommand extends Command {
         }
     }
 }
+
 
 AnchorCommand.description = `Anchor one or more tables to the blockchain.
 Anchor reads the current state of selected table, filtered by an options WHERE 

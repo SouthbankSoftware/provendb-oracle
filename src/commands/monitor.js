@@ -68,7 +68,7 @@ class MonitorCommand extends Command {
                 }
                 if (monitorRequests) {
                     log.info('Looking for new requests in the provendbRequests table');
-                    await processRequests(config,verbose);
+                    await processRequests(config, verbose);
                 }
                 await monitorSleep(interval, config);
             }
@@ -78,6 +78,9 @@ class MonitorCommand extends Command {
         }
     }
 }
+
+//  TODO: write test cases for monitor requests table
+//  TODO: write test cases for columnLists
 
 MonitorCommand.description = `Monitor the database for changes.
 
