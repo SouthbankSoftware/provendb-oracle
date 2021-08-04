@@ -276,7 +276,11 @@ module.exports = {
             throw (error);
         }
     },
-    anchor1Table: async (config, userNameTableName, whereClause, columnList, validate = false, includeScn = false, includeRowIds = false, verbose = false) => {
+    anchor1Table: async ({
+        config, userNameTableName, whereClause, columnList,
+        validate = false, includeScn = false, includeRowIds = false,
+        verbose = false
+    }) => {
         if (verbose) {
             log.setLevel('trace');
         }
@@ -291,7 +295,11 @@ module.exports = {
         const tableDef = await module.exports.getTableDef(userName, tableName, verbose);
         if (tableDef.exists) {
             log.trace('Processing ', tableDef);
-            const tableData = await module.exports.getTableData(tableDef, true, whereClause, includeScn, null, columnList);
+            const tableData = await module.exports.getTableData(
+                {
+                    tableDef, adHoc: true, where: whereClause, includeScn, scnValue: null, columnList
+                }
+            );
             const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, verbose);
             if (debug) {
                 console.log(treeWithProof);
@@ -450,7 +458,7 @@ module.exports = {
             log.info(`Creating ${provendbUser}  user`);
             // SQLs that cannot fail
             let sqls = [`CREATE USER ${provendbUser}  IDENTIFIED BY ` + provendbPassword,
-                `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbUser} `,
+            `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbUser} `,
             ];
 
             for (let s = 0; s < sqls.length; s++) {
@@ -458,11 +466,11 @@ module.exports = {
             }
             // SQLs that might fail
             sqls = [`GRANT SELECT ANY TABLE TO ${provendbUser} `,
-                `GRANT ALTER SESSION to ${provendbUser} `,
-                `GRANT FLASHBACK ANY TABLE  TO ${provendbUser} `,
-                `GRANT execute_catalog_role TO ${provendbUser} `,
-                `GRANT execute ON dbms_alert  TO ${provendbUser} `,
-                `GRANT execute ON dbms_Session to ${provendbUser} `
+            `GRANT ALTER SESSION to ${provendbUser} `,
+            `GRANT FLASHBACK ANY TABLE  TO ${provendbUser} `,
+            `GRANT execute_catalog_role TO ${provendbUser} `,
+            `GRANT execute ON dbms_alert  TO ${provendbUser} `,
+            `GRANT execute ON dbms_Session to ${provendbUser} `
             ];
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(sysConnection, sqls[s], true, verbose);
@@ -471,7 +479,7 @@ module.exports = {
                 log.info(`Creating ${provendbDemoUser}  account`);
                 // Must succeed
                 let sqls = [`CREATE USER ${provendbDemoUser} IDENTIFIED BY ` + provendbPassword,
-                    `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbDemoUser}`
+                `GRANT CONNECT, RESOURCE, CREATE SESSION, SELECT_CATALOG_ROLE , UNLIMITED TABLESPACE, CREATE VIEW TO ${provendbDemoUser}`
                 ];
                 for (let s = 0; s < sqls.length; s++) {
                     await module.exports.execSQL(sysConnection, sqls[s], false, verbose);
@@ -934,7 +942,9 @@ module.exports = {
         for (let tableNo = 0; tableNo < tableNames.length; tableNo++) {
             const tableDef = tableDefs[tableNames[tableNo]];
             log.trace('Processing ', tableDef);
-            const tableData = await module.exports.getTableData(tableDef, false, null, true, null);
+            const tableData = await module.exports.getTableData({
+                tableDef, adHoc: false, where: null, includeScn: true, scnValue: null
+            });
             if (Object.keys(tableData.keyValues).length > 0) {
                 const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, false);
 
@@ -1066,7 +1076,9 @@ module.exports = {
     },
 
     // Process changes for a single table
-    getTableData: async (tableDef, adHoc, where, includeScn, scnValue, columnList = '*', keyColumns = 'ROWID', verbose = false) => {
+    getTableData: async ({
+        tableDef, adHoc, where, includeScn = false, scnValue, columnList = '*', keyColumns = 'ROWID', verbose = false
+    }) => {
         const debug = false;
         if (verbose || debug) {
             log.setLevel('trace');
@@ -1076,6 +1088,7 @@ module.exports = {
         log.trace('IncludeSCN:', includeScn);
         log.trace('ColumnList:', columnList);
         log.trace('keyColumns:', keyColumns);
+        log.trace('adHoc:', adHoc);
 
         const tableName = `${tableDef.tableOwner}.${tableDef.tableName}`;
 
@@ -1095,10 +1108,13 @@ module.exports = {
 
         let rawTableData;
         if (adHoc && !includeScn) {
-            // We always get SCN values unless an adhoc request has been made without
-            // SCNs
+            log.trace('Getting data NoSCN');
             rawTableData = await module.exports.getTableDataNoScn(tableName, where, columnList);
         } else {
+            if (columnList !== '*' || keyColumns !== 'ROWID') {
+                log.warn('Currently do not support column lists or non-ROWID keys for SCN queries');
+            }
+            log.trace('Getting data SCN');
             rawTableData = await module.exports.getTableDataScn(
                 tableName,
                 lastProofableAnchor,
@@ -1133,9 +1149,9 @@ module.exports = {
             log.trace(sqlText);
             const results = await oraConnection.execute(
                 sqlText, {}, {
-                    resultSet: true,
-                    fetchArraySize: 1000
-                }
+                resultSet: true,
+                fetchArraySize: 1000
+            }
             );
 
             console.log('Table: ', tableName);
@@ -1440,8 +1456,8 @@ module.exports = {
         const results = await oraConnection.execute(
             'SELECT rowid_scn FROM provendbcontrolrowids WHERE proofid=:1',
             [proofId], {
-                resultSet: true
-            }
+            resultSet: true
+        }
         );
         const rowBatch = 100;
         let rows = await results.resultSet.getRows(rowBatch);
@@ -1494,7 +1510,13 @@ module.exports = {
                 const proof = await module.exports.getproofFromDB(proofId);
                 // Get data corresponding to proof
                 log.trace('Loading table data');
-                const tableData = await module.exports.getTableData(tableDef, 'adhoc', where, metadata.includeScn, metadata.currentScn, metadata.columnList);
+                // TODO: adHoc is set to True below, which would probably fail an SCN proof
+                const tableData = await module.exports.getTableData(
+                    {
+                        tableDef, adHoc: true, where, includeScn: metadata.includeScn, scnValue: metadata.currentScn,
+                        columnList: metadata.columnList
+                    }
+                );
                 log.trace('Validating table data against proof');
                 const proofMetadata = {
                     tableOwner: tableDef.tableOwner,
@@ -1624,7 +1646,10 @@ async function processAnchorRequest(config, id, requestJson, verbose) {
             where = requestJson.where;
         }
         // TODO: Refactor this to take named parameters
-        await module.exports.anchor1Table(config, requestJson.table, where, columns, false, false, false, verbose);
+        await module.exports.anchor1Table({
+            config, userNameTableName: requestJson.table, whereClause: where,
+            columnList: columns, verbose
+        });
         await completeRequest(id);
     } catch (error) {
         log.error('Error processing request: ', error.message);

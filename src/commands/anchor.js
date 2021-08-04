@@ -8,16 +8,8 @@ const {
 const log = require('simple-node-logger').createSimpleLogger();
 const {
     connectToOracle,
-    getTableDef,
-    getTableData,
-    saveproofToDB,
-    createProofFile,
-    anchor1table,
     anchor1Table
 } = require('../services/oracle');
-const {
-    anchorData
-} = require('../services/proofable');
 const {
     getConfig
 } = require('../services/config');
@@ -44,7 +36,6 @@ class AnchorCommand extends Command {
                 verbose,
                 columns
             } = flags;
-            const outputFile = flags.validate;
             if (where) {
                 whereClause = where.join(' ');
             }
@@ -74,8 +65,11 @@ class AnchorCommand extends Command {
             // tables.forEach(async (userNameTableName) => {
             for (let ti = 0; ti < tables.length; ti++) {
                 const userNameTableName = tables[ti];
-                await anchor1Table(config, userNameTableName, whereClause, columnList, flags.validate, includeScn, includeRowIds, verbose);
+                const anchorArgs = {
+                    config, userNameTableName, whereClause, columnList, validate: flags.validate, includeScn, includeRowIds, verbose
+                };
 
+                await anchor1Table(anchorArgs);
             }
         } catch (error) {
             log.error('Failed to anchor tables:');
