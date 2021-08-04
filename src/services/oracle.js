@@ -69,7 +69,7 @@ module.exports = {
             });
             oracledb.fetchAsString = [oracledb.CLOB];
             log.trace('Connected to Oracle');
-            log.info('SQL TRACE is ', process.env.SQL_TRACE);
+            log.trace('SQL TRACE is ', process.env.SQL_TRACE);
             if (verbose || ('SQL_TRACE' in process.env && process.env.SQL_TRACE === 'TRUE')) {
                 await module.exports.execSQL(oraConnection, 'begin dbms_session.session_trace_enable(waits=>TRUE);end;', false, verbose);
                 await module.exports.execSQL(oraConnection, 'ALTER SESSION SET tracefile_identifier=provendb', false, verbose);
@@ -244,7 +244,10 @@ module.exports = {
                     END; `
             );
             sqls.push(
-                `CREATE OR REPLACE   FUNCTION f_anchorRequest(tableName varchar2,columnList varchar2,whereclause varchar2)
+                `CREATE OR REPLACE FUNCTION f_anchorRequest(
+                    tableName varchar2,
+                    columnList varchar2:=null,
+                    whereclause varchar2:=null)
                 RETURN provendbRequests.id%TYPE IS 
                 l_id provendbRequests.id%TYPE;
                 l_json varchar2(4000);

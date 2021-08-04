@@ -13,7 +13,13 @@ const {
 } = require('./testCommon');
 const execSync = require('child_process').execSync;
 
+const oracledb = require('oracledb');
+
 const parameters = getParameters();
+const provendbUser = parameters.config.oracleConnection.user.toUpperCase();
+const demoSchema = provendbUser + 'DEMO';
+const anchorType = parameters.anchorType;
+
 const debug = false;
 const usePaidToken = false;
 

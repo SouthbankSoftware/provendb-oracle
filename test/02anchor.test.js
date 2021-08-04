@@ -10,6 +10,10 @@ const {
 
 const parameters = getParameters();
 const demoSchema = parameters.config.oracleConnection.user.toUpperCase() + 'DEMO';
+const oracledb = require('oracledb');
+ 
+const provendbUser = parameters.config.oracleConnection.user.toUpperCase();
+const anchorType = parameters.anchorType;
 
 describe('provendb-oracle Anchor tests', () => {
     beforeAll(() => {});

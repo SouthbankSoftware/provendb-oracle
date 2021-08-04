@@ -31,8 +31,16 @@ const {
     merkle,
     anchor
 } = require('provendb-sdk-node');
+const {
+    async
+} = require('regenerator-runtime');
 
 const debug = false;
+
+const dragonGlassAccessKey = '79120886-f78a-3c5b-a51c-7dcec82607b5';
+const dragonGlassAPIKey = '1a0fc3645c05847d43fd58dffae1986436658ba2';
+const dragonGlassTestNetAccessKey = '4b3c47f5-d457-359b-99dd-51b979f51590';
+const dragonGlassTestNetAPIKey = 'd21319e0ce1d737891ea28f5501f2a0aff6da5f1';
 
 
 
@@ -49,10 +57,12 @@ module.exports = {
             hashOut = await module.exports.lookupEthTxn(txnId, verbose);
             log.trace('txnOut ', hashOut);
         } else if (anchorType === 'HEDERA') {
-            hashOut = await module.exports.lookupHederaTxn(txnId, verbose);
+            // hashOut = await module.exports.lookupHederaTxn(txnId, verbose);
+            hashOut = await lookupHederaDragonGlass(txnId, 'testnet');
             log.trace('txnOut ', hashOut);
         } else if (anchorType === 'HEDERA_MAINNET') {
-            hashOut = await module.exports.lookupHederaMainNetTxn(txnId, verbose);
+            // hashOut = await module.exports.lookupHederaMainNetTxn(txnId, verbose);
+            hashOut = await lookupHederaDragonGlass(txnId, 'mainnet');
             log.trace('txnOut ', hashOut);
         } else {
             log.warn(`Do not know how to validate ${anchorType} blockchain entries`);
@@ -104,8 +114,8 @@ module.exports = {
             log.setLevel('trace');
         }
         const apiKey = 'XV98BFQPFGWMDKHWH6NSQ1VM74S3ABTKZS';
-        const txRest = 'https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHas'
-            + 'h&txhash=' + transactionId + '&apikey=' + apiKey;
+        const txRest = 'https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHas' +
+            'h&txhash=' + transactionId + '&apikey=' + apiKey;
         try {
             const config = {
                 method: 'get',
@@ -124,22 +134,27 @@ module.exports = {
             throw new Error(error);
         }
     },
+
     lookupHederaTxn: async (transactionId, verbose) => {
         if (verbose) {
             log.setLevel('trace');
         }
+        let config;
+        let response;
         // Get a document out of the vault
         const endPoint = 'https://api.testnet.kabuto.sh/v1/transaction/' + transactionId;
         try {
-            const config = {
+            config = {
                 method: 'get',
                 url: endPoint
             };
             log.trace(config);
-            const response = await axios(config);
+            response = await axios(config);
             return (response.data.memo);
         } catch (error) {
             log.error(error.message);
+            log.error(config);
+            log.error(response);
             return (false);
         }
     },
@@ -147,18 +162,22 @@ module.exports = {
         if (verbose) {
             log.setLevel('trace');
         }
+        let config;
+        let response;
         // Get a document out of the vault
         const endPoint = 'https://api.kabuto.sh/v1/transaction/' + transactionId;
         try {
-            const config = {
+            config = {
                 method: 'get',
                 url: endPoint
             };
             log.trace(config);
-            const response = await axios(config);
+            response = await axios(config);
             return (response.data.memo);
         } catch (error) {
             log.error(error.message);
+            log.error(config);
+            log.error(response);
             return (false);
         }
     },
@@ -342,3 +361,38 @@ function findVal(object, key) {
     });
     return value;
 }
+
+async function lookupHederaDragonGlass(transactionId, network = 'mainnet', verbose = false) {
+    if (verbose) {
+        log.setLevel('trace');
+    }
+    log.trace(`Dragonglass ${network} ${transactionId}`);
+    let apiEndPoint = `https://api.dragonglass.me/hedera/api/transactions?query=${transactionId}`;
+
+    let accessKey = dragonGlassAccessKey;
+    if (network === 'testnet') {
+        apiEndPoint = `https://api-testnet.dragonglass.me/hedera/api/transactions?query=${transactionId}`;
+        accessKey = dragonGlassTestNetAccessKey;
+    }
+    try {
+        config = {
+            method: 'get',
+            url: apiEndPoint,
+            headers: {
+                'x-api-key': accessKey,
+                Accept: 'application/json',
+                Host: 'api.dragonglass.me'
+            }
+        };
+        log.trace(config);
+        response = await axios(config);
+        log.trace('okr', Object.keys(response));
+
+        return (response.data.data[0].memo);
+    } catch (error) {
+        log.error(error.message);
+        log.error(config);
+        log.error(response);
+        return (false);
+    }
+};

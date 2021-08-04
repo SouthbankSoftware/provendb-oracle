@@ -40,27 +40,14 @@ provendb-oracle history --tables=PROVENDBDEMO.CONTRACTSTABLEFBDA --where=CONTRAC
 
 var request_id number
 
-DECLARE
-  TABLENAME VARCHAR2(200);
-  COLUMNLIST VARCHAR2(200);
-  WHERECLAUSE VARCHAR2(200);
-  v_Return NUMBER;
-BEGIN
-  TABLENAME := 'FABHUMS.EVENT_PAYLOAD';
-  COLUMNLIST := 'ID,PAYLOAD';
-  WHERECLAUSE := 'ID<14832';
-
-  v_Return := F_ANCHORREQUEST(
-    TABLENAME => TABLENAME,
-    COLUMNLIST => COLUMNLIST,
-    WHERECLAUSE => WHERECLAUSE
-  );
-  /* Legacy output: 
-DBMS_OUTPUT.PUT_LINE('v_Return = ' || v_Return);
-*/ 
-  :v_Return := v_Return;
---rollback; 
-END;
+        DECLARE
+            v_Return NUMBER;
+        BEGIN
+            :request_id:= F_ANCHORREQUEST(
+            TABLENAME => 'PROVENDBTEST1452DEMO.CONTRACTSTABLE' );
+     
+        END;
+/
 
 print request_id;
 

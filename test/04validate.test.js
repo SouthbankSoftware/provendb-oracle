@@ -14,11 +14,12 @@ const {
 const parameters = getParameters();
 const provendbUser = parameters.config.oracleConnection.user.toUpperCase();
 const demoSchema = provendbUser + 'DEMO';
+const debug = false;
 
 
 
-describe('provendb-oracle Anchor tests', () => {
-    beforeAll(() => {});
+describe('provendb-oracle Validation tests', () => {
+    beforeAll(() => { });
 
     beforeEach(() => {
 
@@ -28,7 +29,7 @@ describe('provendb-oracle Anchor tests', () => {
 
     });
 
-    afterAll(() => {});
+    afterAll(() => { });
 
     test('Test help', async () => {
         const output = await provendbOracle('validate --help');
@@ -45,7 +46,7 @@ describe('provendb-oracle Anchor tests', () => {
 
         let rowId;
         const lastLine = lines[lines.length - 2];
-        console.log(lastLine);
+        if (debug) console.log(lastLine);
         const rowIdMatch = lastLine.match(/(\S+)(.*)/);
         if (rowIdMatch && rowIdMatch.length > 1) {
             rowId = rowIdMatch[1];
@@ -74,7 +75,7 @@ describe('provendb-oracle Anchor tests', () => {
                 break;
             }
         }
-        console.log('rowIdScn',rowidScn);
+        if (debug) console.log('rowIdScn', rowidScn);
         const vOutput = await provendbOracle(`validate --config=testConfig.yaml --rowId=${rowidScn}`);
         expect(vOutput).toEqual(expect.stringMatching('PASS: blockchain hash matches proof hash'));
         expect(vOutput).toEqual(expect.stringMatching('PASS: Proof validated with hash'));
@@ -105,7 +106,7 @@ describe('provendb-oracle Anchor tests', () => {
 
     test('Validate all Proofs', async () => {
         jest.setTimeout(120000);
-        console.log(provendbUser);
+        if (debug) console.log(provendbUser);
         const oraConnection = await oracledb.getConnection({
             connectString: parameters.P4O_ORACLE_SERVER,
             user: provendbUser,

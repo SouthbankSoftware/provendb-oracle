@@ -81,7 +81,7 @@ module.exports = {
                 user: provendbUser,
                 password: provendbPassword
             },
-            anchorType: 'HEDERA',
+            anchorType: 'ETH',
             dbmsAlert: 'TRUE',
             proofable: {
                 token: freeAnchorKey,
