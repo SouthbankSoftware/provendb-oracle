@@ -16,7 +16,8 @@ const provendbUser = parameters.config.oracleConnection.user.toUpperCase();
 const demoSchema = provendbUser + 'DEMO';
 const debug = false;
 
-
+// TODO More tampering tests
+// TODO More row tests
 
 describe('provendb-oracle Validation tests', () => {
     beforeAll(() => { });
@@ -77,6 +78,43 @@ describe('provendb-oracle Validation tests', () => {
         }
         if (debug) console.log('rowIdScn', rowidScn);
         const vOutput = await provendbOracle(`validate --config=testConfig.yaml --rowId=${rowidScn}`);
+        expect(vOutput).toEqual(expect.stringMatching('PASS: blockchain hash matches proof hash'));
+        expect(vOutput).toEqual(expect.stringMatching('PASS: Proof validated with hash'));
+        expect(vOutput).toEqual(expect.stringMatching('PASS: Rowid hash value confirmed as'));
+        expect(vOutput).not.toEqual(expect.stringMatching('ERROR'));
+        expect(vOutput).not.toEqual(expect.stringMatching('FAIL'));
+    });
+
+    test('Validate a rowid SCN', async () => {
+        jest.setTimeout(120000);
+        const output = await provendbOracle(`history --config=testConfig.yaml --tables=${demoSchema}.CONTRACTSTABLEFBDA`);
+
+        expect(output).toEqual(expect.stringMatching(`Table:  ${demoSchema}.CONTRACTSTABLE`));
+        expect(output).toEqual(expect.stringMatching('Rowid'));
+        const lines = output.toString().split(/(?:\r\n|\r|\n)/g);
+        let rowidScn;
+        for (let ln = 0; ln < lines.length; ln++) {
+            const line = lines[ln];
+            const lmatch = line.match(/^(\s+)([A-Za-z0-9\+\\]+\.[0-9]+)(\s+)(.*)/);
+            if (lmatch) {
+                rowidScn = lmatch[2];
+                break;
+            }
+        }
+        if (debug) console.log('rowIdScn', rowidScn);
+        const vOutput = await provendbOracle(`validate --config=testConfig.yaml --rowId=${rowidScn}`);
+        expect(vOutput).toEqual(expect.stringMatching('PASS: blockchain hash matches proof hash'));
+        expect(vOutput).toEqual(expect.stringMatching('PASS: Proof validated with hash'));
+        expect(vOutput).toEqual(expect.stringMatching('PASS: Rowid hash value confirmed as'));
+        expect(vOutput).not.toEqual(expect.stringMatching('ERROR'));
+        expect(vOutput).not.toEqual(expect.stringMatching('FAIL'));
+    });
+
+    test('Validate a non ROWID key', async () => {
+        jest.setTimeout(120000);
+        const output = await provendbOracle(`history --config=testConfig.yaml --tables=${demoSchema}.CONTRACTSTABLEFBDA`);
+
+        const vOutput = await provendbOracle('validate --config=testConfig.yaml --rowId=46');
         expect(vOutput).toEqual(expect.stringMatching('PASS: blockchain hash matches proof hash'));
         expect(vOutput).toEqual(expect.stringMatching('PASS: Proof validated with hash'));
         expect(vOutput).toEqual(expect.stringMatching('PASS: Rowid hash value confirmed as'));

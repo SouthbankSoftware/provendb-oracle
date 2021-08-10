@@ -230,6 +230,7 @@ module.exports = {
                     status      VARCHAR2(12) DEFAULT('NEW'),
                     statusDate  DATE DEFAULT(SYSDATE),
                     messages    VARCHAR(4000),
+                    proofId     VARCHAR(256), 
                     CONSTRAINT  "requestIsJSON" CHECK (requestJSON IS JSON),
                     CONSTRAINT  provendbRequests_pk PRIMARY KEY (id))`
             );
@@ -244,28 +245,45 @@ module.exports = {
                     END; `
             );
             sqls.push(
-                `CREATE OR REPLACE FUNCTION f_anchorRequest(
-                    tableName varchar2,
-                    columnList varchar2:=null,
-                    whereclause varchar2:=null)
-                RETURN provendbRequests.id%TYPE IS 
-                l_id provendbRequests.id%TYPE;
-                l_json varchar2(4000);
-            BEGIN
-                l_json:='{"table":"'||tableName||'"' ;
-                if columnList is not null then 
-                    l_json:=l_json||',"columns":"'||columnList||'"';
-                end if;
-                if whereclause is not null then 
-                    l_json:=l_json||',"where":"'||whereclause||'"';
-                end if;
-                l_json:=l_json||'}';
-                INSERT INTO provendbRequests(requestJSON) 
-                    VALUES(l_json)
-                    returning id INTO l_id;
-                COMMIT;
-                RETURN(l_id);
-            END;`
+                `CREATE OR REPLACE FUNCTION f_anchorrequest (
+                    tablename    VARCHAR2,
+                    columnlist   VARCHAR2 := '*',
+                    whereclause  VARCHAR2 := NULL,
+                    keyColumn    VARCHAR2 := 'ROWID'
+                ) RETURN provendbrequests.id%TYPE IS
+                    l_id    provendbrequests.id%TYPE;
+                    l_json  VARCHAR2(4000);
+                BEGIN
+                    l_json := '{"table":"'
+                              || tablename
+                              || '"';
+                    IF columnlist IS NOT NULL THEN
+                        l_json := l_json
+                                  || ',"columns":"'
+                                  || columnlist
+                                  || '"';
+                    END IF;
+                
+                    IF whereclause IS NOT NULL THEN
+                        l_json := l_json
+                                  || ',"where":"'
+                                  || whereclause
+                                  || '"';
+                    END IF;
+                    
+                    IF keyColumn IS NOT NULL THEN 
+                            l_json := l_json
+                                  || ',"keyColumn":"'
+                                  || keyColumn
+                                  || '"';
+                    END IF;
+                
+                    l_json := l_json || '}';
+                    INSERT INTO provendbrequests ( requestjson ) VALUES ( l_json ) RETURNING id INTO l_id;
+                
+                    COMMIT;
+                    RETURN ( l_id );
+                END;`
             );
 
             for (let s = 0; s < sqls.length; s++) {
@@ -277,13 +295,20 @@ module.exports = {
         }
     },
     anchor1Table: async ({
-        config, userNameTableName, whereClause, columnList,
-        validate = false, includeScn = false, includeRowIds = false,
+        config,
+        userNameTableName,
+        whereClause,
+        columnList,
+        validate = false,
+        includeScn = false,
+        includeRowIds = false,
+        keyColumn = 'ROWID',
         verbose = false
     }) => {
         if (verbose) {
             log.setLevel('trace');
         }
+        let proofId;
         const splitTableName = userNameTableName.split('.');
         if (splitTableName.length != 2) {
             const errm = 'Table Definitions should be in user.table format';
@@ -295,18 +320,22 @@ module.exports = {
         const tableDef = await module.exports.getTableDef(userName, tableName, verbose);
         if (tableDef.exists) {
             log.trace('Processing ', tableDef);
-            const tableData = await module.exports.getTableData(
-                {
-                    tableDef, adHoc: true, where: whereClause, includeScn, scnValue: null, columnList
-                }
-            );
+            const tableData = await module.exports.getTableData({
+                tableDef,
+                adHoc: true,
+                where: whereClause,
+                includeScn,
+                scnValue: null,
+                columnList,
+                keyColumn
+            });
             const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, verbose);
             if (debug) {
                 console.log(treeWithProof);
                 console.log(Object.keys(treeWithProof));
             }
             const proof = treeWithProof.proofs[0];
-            const proofId = proof.id;
+            proofId = proof.id;
             await module.exports.saveproofToDB(
                 treeWithProof,
                 tableDef.tableOwner,
@@ -315,7 +344,8 @@ module.exports = {
                 'AdHoc',
                 whereClause,
                 includeScn,
-                columnList
+                columnList,
+                keyColumn
             );
             log.info(`Proof ${proofId} created and stored to DB`);
             if (validate) {
@@ -325,6 +355,7 @@ module.exports = {
         } else {
             throw new Error('Table ' + userNameTableName + ' cannot be accessed');
         }
+        return (proofId);
     },
     createDemoTables: async (connectString, provendbUser, provendbPassword, verbose = false) => {
         log.info('Creating demo tables');
@@ -502,7 +533,7 @@ module.exports = {
 
     // Get data for a specific rowid key
     // A rowid Key is the in the format rowid.scn
-    getRowData: async (tableOwner, tableName, rowidKey, verbose = false) => {
+    getRowData: async (tableOwner, tableName, rowidKey, metaData = {}, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
@@ -525,9 +556,9 @@ module.exports = {
 
         const tableOwnerName = `${tableOwner}.${tableName}`;
         if (useScn) {
-            result = await getRowDataWithScn(tableOwnerName, scn, theRowId, verbose);
+            result = await getRowDataWithScn(tableOwnerName, scn, theRowId, metaData, verbose);
         } else {
-            result = await getRowDataNoScn(tableOwnerName, theRowId, verbose);
+            result = await getRowDataNoScn(tableOwnerName, theRowId, metaData, verbose);
         }
         assert(result.rows.length === 1, 'Only one row returned for rowid_scn');
         const row = result.rows[0];
@@ -685,7 +716,7 @@ module.exports = {
             tableData.exists = false;
             log.error('Table ', user, '.', table, ' Cannot be accessed');
         }
-        log.info(tableData);
+        log.trace(tableData);
         return tableData;
     },
 
@@ -712,7 +743,7 @@ module.exports = {
         }
         const jsonData = module.exports.ora2json(fatData); // JSON version of data
         if (jsonData.length === 0) {
-            log.info(`${user}.${table} is not flashback managed`);
+            log.trace(`${user}.${table} is not flashback managed`);
             tableData.hasFBDA = false;
         } else {
             tableData = jsonData[0];
@@ -743,7 +774,10 @@ module.exports = {
     },
 
     // Get table data as it currently exists
-    getTableDataNoScn: async (tableName, where, columnList = '*') => {
+    getTableDataNoScn: async (tableName, where, columnList = '*', keyColumn = 'ROWID', verbose = false) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
         let result;
         let whereClause = '';
 
@@ -753,9 +787,14 @@ module.exports = {
         if (columnList === '*') {
             columnList = 'C.*';
         }
+        if (keyColumn === 'ROWID') {
+            keyColumn = 'rowidtochar(C.ROWID)';
+        } else {
+            keyColumn = `C.${keyColumn}`;
+        }
 
         const sqlText = `
-        SELECT rowidtochar(C.ROWID) as row_rowid,${columnList}  
+        SELECT ${keyColumn} as row_rowid,${columnList}  
             FROM ${tableName} C ${whereClause}
         `;
         log.trace(sqlText);
@@ -943,7 +982,11 @@ module.exports = {
             const tableDef = tableDefs[tableNames[tableNo]];
             log.trace('Processing ', tableDef);
             const tableData = await module.exports.getTableData({
-                tableDef, adHoc: false, where: null, includeScn: true, scnValue: null
+                tableDef,
+                adHoc: false,
+                where: null,
+                includeScn: true,
+                scnValue: null
             });
             if (Object.keys(tableData.keyValues).length > 0) {
                 const treeWithProof = await anchorData(tableData, config.anchorType, config.proofable.token, false);
@@ -982,13 +1025,16 @@ module.exports = {
                 break;
             } else {
                 log.trace(request);
-                log.info('Processing request ');
+
                 const id = request.rows[0][0];
                 const requestType = request.rows[0][1];
                 const requestJson = JSON.parse(request.rows[0][2]);
                 log.trace(id, requestType, requestJson);
+                log.info('Processing request ', requestJson);
                 if (requestType === 'ANCHOR') {
                     await processAnchorRequest(config, id, requestJson, verbose);
+                } else if (requestType === 'VALIDATE') {
+                    await processValidateRequest(config, id, requestJson, verbose);
                 }
                 oraConnection.commit;
                 break;
@@ -996,7 +1042,7 @@ module.exports = {
         }
     },
     // Save a proof to the Proofable control table
-    saveproofToDB: async (treeWithProof, tableOwner, tableName, tableData, proofType, whereclause, includeScn, columnList = '*') => {
+    saveproofToDB: async (treeWithProof, tableOwner, tableName, tableData, proofType, whereclause, includeScn, columnList = '*', keyColumn = 'ROWID') => {
         try {
             if (debug) {
                 console.log(JSON.stringify(treeWithProof));
@@ -1015,7 +1061,8 @@ module.exports = {
                 whereclause,
                 currentScn: tableData.currentScn,
                 includeScn,
-                columnList
+                columnList,
+                keyColumn
             };
             const insOut = await oraConnection.execute(
                 `INSERT INTO provendbcontrol 
@@ -1077,7 +1124,14 @@ module.exports = {
 
     // Process changes for a single table
     getTableData: async ({
-        tableDef, adHoc, where, includeScn = false, scnValue, columnList = '*', keyColumns = 'ROWID', verbose = false
+        tableDef,
+        adHoc,
+        where,
+        includeScn = false,
+        scnValue,
+        columnList = '*',
+        keyColumn = 'ROWID',
+        verbose = false
     }) => {
         const debug = false;
         if (verbose || debug) {
@@ -1087,7 +1141,7 @@ module.exports = {
         log.trace(' Where: ', where);
         log.trace('IncludeSCN:', includeScn);
         log.trace('ColumnList:', columnList);
-        log.trace('keyColumns:', keyColumns);
+        log.trace('keyColumn:', keyColumn);
         log.trace('adHoc:', adHoc);
 
         const tableName = `${tableDef.tableOwner}.${tableDef.tableName}`;
@@ -1109,9 +1163,9 @@ module.exports = {
         let rawTableData;
         if (adHoc && !includeScn) {
             log.trace('Getting data NoSCN');
-            rawTableData = await module.exports.getTableDataNoScn(tableName, where, columnList);
+            rawTableData = await module.exports.getTableDataNoScn(tableName, where, columnList, keyColumn);
         } else {
-            if (columnList !== '*' || keyColumns !== 'ROWID') {
+            if (columnList !== '*' || keyColumn !== 'ROWID') {
                 log.warn('Currently do not support column lists or non-ROWID keys for SCN queries');
             }
             log.trace('Getting data SCN');
@@ -1230,12 +1284,28 @@ module.exports = {
     },
 
     // Get proof for a specific rowidStarttime key
-    getproofForRowid: async (rowidScn, verbose = false) => {
+    getproofForRowid: async (rowidScn, proofId, verbose = false) => {
         if (verbose) {
             log.setLevel('trace');
         }
-        const result = await oraConnection.execute(
-            `
+        let result;
+        if (proofId) {
+            result = await oraConnection.execute(
+                `
+                SELECT proofid,
+                        owner_name,
+                        table_name
+                FROM provendbcontrolrowids
+                JOIN provendbcontrol USING ( proofid )
+                WHERE rowid_scn = :1 AND proofid=:2
+                ORDER BY versions_starttime DESC
+                FETCH FIRST 1 ROWS ONLY
+            `,
+                [rowidScn, proofId],
+            );
+        } else {
+            result = await oraConnection.execute(
+                `
                 SELECT proofid,
                         owner_name,
                         table_name
@@ -1245,22 +1315,28 @@ module.exports = {
                 ORDER BY versions_starttime DESC
                 FETCH FIRST 1 ROWS ONLY
             `,
-            [rowidScn],
-        );
+                [rowidScn],
+            );
+        }
         log.trace(result);
         if (result.rows.length === 0) {
             throw new Error('No such rowid.startTime - check provendbcontrolsRowids table');
         }
 
-        const proofId = result.rows[0][0];
+        const proofIdretrieved = result.rows[0][0];
         const tableOwner = result.rows[0][1];
         const tableName = result.rows[0][2];
-        log.trace(`identifier ${rowidScn} is found in proof ${proofId}`);
-        const proof = await module.exports.getproofFromDB(proofId, verbose);
+        log.trace(`identifier ${rowidScn} is found in proof ${proofIdretrieved}`);
+        const {
+            proof,
+            metaData
+        } = await module.exports.getproofFromDB(proofIdretrieved, verbose);
         return {
             proof,
             tableOwner,
             tableName,
+            metaData,
+            proofIdretrieved
         };
     },
     getproofFromDB: async (proofId, verbose = false) => {
@@ -1280,7 +1356,7 @@ module.exports = {
             const data = await oraConnection.execute(
                 `
                 SELECT proof, owner_name, table_name,
-                        start_time, end_time
+                        start_time, end_time,metadata
                     FROM provendbcontrol
                 WHERE proofid = :1
     `,
@@ -1298,18 +1374,31 @@ module.exports = {
             const tableName = data.rows[0][2];
             const startTime = data.rows[0][3];
             const endTime = data.rows[0][4];
+            const metaData = JSON.parse(data.rows[0][5]);
             log.trace('Retrieved proof ', proofId, ' for ', tableOwner, '.', tableName);
             log.trace(' Data range ', startTime, ' to ', endTime);
-            log.trace(typeof proof);
-            log.trace('proof', proof);
-            return proof;
+            log.trace('proof: ', proof);
+            log.trace('metadata: ', metaData);
+            return {
+                proof,
+                metaData
+            };
         } catch (error) {
             log.error(error.message, ' while retrieving proof from db');
         }
     },
     // Validate a rowid/timstamp key
-    validateRow: async (rowidKey, outputFile, generateCertificate = false, config, verbose = false, silent = false) => {
+    validateRow: async ({
+        rowidKey,
+        outputFile,
+        generateCertificate = false,
+        proofId,
+        config,
+        verbose = false,
+        silent = false
+    }) => {
         // Output files
+
         try {
             if (verbose) {
                 log.setLevel('trace');
@@ -1349,11 +1438,14 @@ module.exports = {
             const {
                 proof,
                 tableOwner,
-                tableName
-            } = await module.exports.getproofForRowid(proofRowIdKey, verbose);
-            log.trace('proof ', proof);
+                tableName,
+                metaData,
+                proofIdretrieved
+            } = await module.exports.getproofForRowid(proofRowIdKey, proofId, verbose);
+            log.info('Using proof ', proofIdretrieved, ' to Validate Row');
+            log.trace('metadata: ', metaData);
             // Get the current state of data
-            const rowData = await module.exports.getRowData(tableOwner, tableName, proofRowIdKey, verbose);
+            const rowData = await module.exports.getRowData(tableOwner, tableName, proofRowIdKey, metaData, verbose);
             log.trace('key/value for rowProof ', rowData);
             const proofHash = crypto.createHash('sha256').update(rowData.hash).digest('hex');
             // TODO: this two level hashing process might be confusing
@@ -1409,7 +1501,6 @@ module.exports = {
             const proofId = tree.proofs[0].id;
             log.info(`Writing proof for ${proofId} to ${outputFile}`);
 
-            // const proof = module.exports.getproofFromDB(proofId, verbose);
             const tmpDir2 = tmp.dirSync().name;
             const proofFile = `${tmpDir2}/${proofId}.provendb`;
             tree.exportSync(proofFile);
@@ -1489,13 +1580,15 @@ module.exports = {
     },
     validateOracleProof: async (proofId, outputFile, verbose) => {
         // Get proof data from db;
-        let validatedProof;
-
+        let proofIsValid;
+        const messages = [];
+        let message;
         if (verbose) {
             log.setLevel('trace');
         }
         try {
             log.trace('Retrieving proof details for ', proofId);
+
             const {
                 tableDef,
                 prooftype,
@@ -1507,16 +1600,23 @@ module.exports = {
             if (tableDef.exists) {
                 // Get proof as well
                 log.trace('Getting Proof');
-                const proof = await module.exports.getproofFromDB(proofId);
+                const {
+                    proof,
+                    metaData
+                } = await module.exports.getproofFromDB(proofId);
                 // Get data corresponding to proof
                 log.trace('Loading table data');
                 // TODO: adHoc is set to True below, which would probably fail an SCN proof
-                const tableData = await module.exports.getTableData(
-                    {
-                        tableDef, adHoc: true, where, includeScn: metadata.includeScn, scnValue: metadata.currentScn,
-                        columnList: metadata.columnList
-                    }
-                );
+
+                const tableData = await module.exports.getTableData({
+                    tableDef,
+                    adHoc: true,
+                    where,
+                    includeScn: metaData.includeScn,
+                    scnValue: metaData.currentScn,
+                    columnList: metaData.columnList,
+                    keyColumn: metaData.keyColumn
+                });
                 log.trace('Validating table data against proof');
                 const proofMetadata = {
                     tableOwner: tableDef.tableOwner,
@@ -1526,22 +1626,44 @@ module.exports = {
                     currentScn: metadata.currentScn,
                     validationDate: new Date()
                 };
-                const validatedData = await validateData(proof, tableData.keyValues, outputFile, proofMetadata, verbose);
-                log.trace('validated data ', validatedData);
-                const blockchainProof = proof.proofs[0];
-                log.trace(blockchainProof);
-                const validatedProof = await validateProof(blockchainProof, verbose);
-                log.trace('validatedProof ', validatedProof);
-                log.trace('Expected value for blockchain transaction is ', validatedProof.expectedValue);
-                if (await validateBlockchainHash(blockchainProof.anchorType, blockchainProof.metadata.txnId, validatedProof.expectedValue, verbose)) {
-                    log.info('PASS: Proof validated with hash ', validatedProof.expectedValue, ' on ', blockchainProof.metadata.txnUri);
+                const validateDataOut = await validateData(proof, tableData.keyValues, outputFile, proofMetadata, verbose);
+                log.trace('validateData out=', validateDataOut);
+                if (validateDataOut.goodProof) {
+                    message = `PASS: Validated all data hashes for ${proofId}`;
+                    log.info(message);
+                    messages.push(message);
+                    log.trace('validated data ', validateDataOut);
+                    const blockchainProof = proof.proofs[0];
+                    log.trace(blockchainProof);
+                    const validatedProof = await validateProof(blockchainProof, verbose);
+                    log.trace('validatedProof ', validatedProof);
+                    log.trace('Expected value for blockchain transaction is ', validatedProof.expectedValue);
+                    if (await validateBlockchainHash(blockchainProof.anchorType, blockchainProof.metadata.txnId, validatedProof.expectedValue, verbose)) {
+                        const message = `PASS: Proof validated with hash ${validatedProof.expectedValue} on ${blockchainProof.metadata.txnUri}`;
+                        log.info(message);
+                        messages.push(message);
+                        proofIsValid = true;
+                    } else {
+                        const message = 'FAIL: Cannot validate blockchain hash - see log';
+                        log.error(message);
+                        messages.push(message);
+                    }
                 } else {
-                    log.error('FAIL: Cannot validate blockchain hash');
+                    message = `FAIL: Mismatch in data hashes for ${proofId} - see log`;
+                    log.error(message);
+                    messages.push(message);
+                    messages.push({badKeys:validateDataOut.badKeys});
+                    proofIsValid = false;
                 }
             } else {
-                log.error('Table refered to in proof no longer exists');
+                message = 'Table refered to in proof no longer exists';
+                log.error(message);
+                messages.push(message);
             }
-            return (validatedProof);
+            return ({
+                proofIsValid,
+                messages
+            });
         } catch (error) {
             log.error(error.message);
             throw (error);
@@ -1611,14 +1733,28 @@ async function getRowDataWithScn(tableOwnerName, scn, therowid, verbose = false)
     }
 }
 
-async function getRowDataNoScn(tableOwnerName, therowid, verbose = false) {
+async function getRowDataNoScn(tableOwnerName, therowid, metaData = {}, verbose = false) {
     if (verbose) {
         log.setLevel('trace');
     }
+    let rowidSELECT = 'rowidtochar(c.rowid)';
+    let rowidWHERE = 'ROWID';
+    if (metaData.keyColumn && metaData.keyColumn !== 'ROWID') {
+        rowidSELECT = metaData.keyColumn;
+        rowidWHERE = metaData.keyColumn;
+    }
+    let columnList = 'C.*';
+    if ('columnList' in metaData) {
+        columnList = metaData.columnList;
+    }
+    if (columnList === '*') {
+        columnList = 'C.*';
+    }
+
     const sqlText = `
-        SELECT rowidtochar(c.rowid) AS row_rowid, c.*
+        SELECT ${rowidSELECT} AS row_rowid, ${columnList}  
           FROM ${tableOwnerName}  C
-         WHERE ROWID = :therowid`;
+         WHERE ${rowidWHERE} = :therowid`;
 
     log.trace(sqlText);
     const result = await oraConnection.execute(sqlText, {
@@ -1633,7 +1769,9 @@ async function processAnchorRequest(config, id, requestJson, verbose) {
     }
     log.trace('json: ', requestJson);
     let where;
+    let keyColumn;
     let columns = '*';
+
     if (!('table' in requestJson)) {
         await invalidateRequest(id, 'Must specify table argument in request');
         return;
@@ -1645,12 +1783,45 @@ async function processAnchorRequest(config, id, requestJson, verbose) {
         if ('where' in requestJson) {
             where = requestJson.where;
         }
-        // TODO: Refactor this to take named parameters
-        await module.exports.anchor1Table({
-            config, userNameTableName: requestJson.table, whereClause: where,
-            columnList: columns, verbose
+        if ('keyColumn' in requestJson) {
+            keyColumn = requestJson.keyColumn;
+        }
+
+        const proofId = await module.exports.anchor1Table({
+            config,
+            userNameTableName: requestJson.table,
+            whereClause: where,
+            columnList: columns,
+            keyColumn,
+            verbose
         });
-        await completeRequest(id);
+        await completeRequest(id, proofId);
+    } catch (error) {
+        log.error('Error processing request: ', error.message);
+        await invalidateRequest(id, error.message);
+    }
+}
+
+async function processValidateRequest(config, id, requestJson, verbose) {
+    if (verbose) {
+        log.setLevel('trace');
+    }
+    log.trace('json: ', requestJson);
+    let proofId;
+
+    if (!('proofId' in requestJson)) {
+        await invalidateRequest(id, 'Must specify proofId in request');
+        return;
+    }
+    try {
+        proofId = requestJson.proofId;
+        const validateOracleProofOut = await module.exports.validateOracleProof(proofId, `${proofId}.provendb`, verbose);
+        log.trace(validateOracleProofOut);
+        if (validateOracleProofOut.proofIsValid) {
+            await completeRequest(id, proofId, validateOracleProofOut.messages);
+        } else {
+            await invalidateRequest(id, JSON.stringify(validateOracleProofOut.messages));
+        }
     } catch (error) {
         log.error('Error processing request: ', error.message);
         await invalidateRequest(id, error.message);
@@ -1671,13 +1842,18 @@ async function invalidateRequest(id, message) {
     log.error(`Request ${id} failed: ${message}`);
 }
 
-async function completeRequest(id) {
+async function completeRequest(id, proofId, messages = []) {
+    const bindMessages = JSON.stringify(messages);
     await oraConnection.execute(`
         UPDATE provendbrequests 
            SET status='SUCCESS',
-               statusdate=sysdate
+               statusdate=sysdate,
+               proofId=:proofId,
+               messages=:bindMessages
          WHERE ID=:id `, {
-        id
+        id,
+        proofId,
+        bindMessages
     });
     oraConnection.commit;
     log.info('Request ', id, ' succeeded');

@@ -63,12 +63,14 @@ class ValidateCommand extends Command {
             if (rowId) {
                 log.info(`Validating row: ${rowId}`);
 
-                // TODO: Need to accept a Proof here as well.
-                await validateRow(rowId, outputFile, generateCertificate, config, verbose);
+                // TODO: Need to accept a Proof here
+                await validateRow({
+                    rowidKey:rowId, outputFile, generateCertificate, proofId, config, verbose
+                });
 
                 log.info('Row proof written to ', outputFile);
             }
-            if (proofId) {
+            if (proofId && !rowId) {
                 log.info(`Validating proofId: ${proofId}`);
 
                 // TODO: Need to compress the output file
@@ -95,7 +97,7 @@ proof file can serve as an independent proof of the data.
 ValidateCommand.flags = {
     rowId: flags.string({
         string: 'r',
-        description: 'row ID to validate',
+        description: 'row ID (or key) to validate',
         required: false,
     }),
     proofId: flags.string({

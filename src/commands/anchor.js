@@ -34,7 +34,8 @@ class AnchorCommand extends Command {
                 includeRowIds,
                 includeScn,
                 verbose,
-                columns
+                columns,
+                keyColumn
             } = flags;
             if (where) {
                 whereClause = where.join(' ');
@@ -48,6 +49,10 @@ class AnchorCommand extends Command {
 
             if (verbose) {
                 log.setLevel('trace');
+            }
+
+            if (includeScn) {
+                log.warn('Including SCNs in proofs is an EXPERIMENTAL feature');
             }
 
             if (includeScn && columnList) {
@@ -66,8 +71,9 @@ class AnchorCommand extends Command {
             for (let ti = 0; ti < tables.length; ti++) {
                 const userNameTableName = tables[ti];
                 const anchorArgs = {
-                    config, userNameTableName, whereClause, columnList, validate: flags.validate, includeScn, includeRowIds, verbose
+                    config, userNameTableName, whereClause, columnList, validate: flags.validate, includeScn, includeRowIds, verbose, keyColumn
                 };
+                log.trace(anchorArgs);
 
                 await anchor1Table(anchorArgs);
             }
@@ -95,6 +101,12 @@ AnchorCommand.flags = {
     columns: flags.string({
         string: 'c',
         description: 'columns to be included in the proof',
+        required: false,
+        multiple: false,
+    }),
+    keyColumn: flags.string({
+        string: 'k',
+        description: 'column to be used as key for the row data (default ROWID)',
         required: false,
         multiple: false,
     }),

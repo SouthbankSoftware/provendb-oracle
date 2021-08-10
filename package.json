@@ -1,7 +1,7 @@
 {
     "name": "provendb-oracle",
     "description": "ProvenDB Connector for Oracle",
-    "version": "0.5.2",
+    "version": "0.6.0",
     "author": "Guy Harrison",
     "bin": {
         "provendb-oracle": "./run.js"

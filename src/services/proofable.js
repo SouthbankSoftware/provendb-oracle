@@ -114,8 +114,8 @@ module.exports = {
             log.setLevel('trace');
         }
         const apiKey = 'XV98BFQPFGWMDKHWH6NSQ1VM74S3ABTKZS';
-        const txRest = 'https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHas' +
-            'h&txhash=' + transactionId + '&apikey=' + apiKey;
+        const txRest = 'https://api-rinkeby.etherscan.io/api?module=proxy&action=eth_getTransactionByHas'
+            + 'h&txhash=' + transactionId + '&apikey=' + apiKey;
         try {
             const config = {
                 method: 'get',
@@ -187,6 +187,7 @@ module.exports = {
             log.setLevel('trace');
         }
         let goodProof = false;
+        let badKeys = [];
 
         const tree = makeTree(inputKeyValues, verbose);
         const calculatedRoot = tree.getRoot();
@@ -198,6 +199,8 @@ module.exports = {
             log.error(`FAIL: proof hash does not match data hash proof: ${proofRoot}, data: ${calculatedRoot}`);
             console.log(tree);
             goodProof = false;
+            badKeys = getBadKeys(proof, tree);
+            log.trace(badKeys);
         }
         // TODO: Should compress this file
         if (goodProof) {
@@ -208,7 +211,8 @@ module.exports = {
             log.info('Wrote proof to ', outputFile);
             await fs.writeFileSync(outputFile, JSON.stringify(proofDoc));
         }
-        return (goodProof);
+        log.trace('goodProof=', goodProof);
+        return ({goodProof, badKeys});
     },
     // TODO: Create a demo script for p4o
 
@@ -362,6 +366,34 @@ function findVal(object, key) {
     return value;
 }
 
+function getBadKeys(proof, tree) {
+    const badKeyList = [];
+    const proofLeaves = proof.getLeaves();
+    const treeLeaves = tree.getLeaves();
+    if (proofLeaves.length !== treeLeaves.length) {
+        log.info('Mismatch in number of keys when validating data');
+        badKeyList.push('different number of keys in proof and validated data');
+    } else {
+        for (leafId = 0; leafId < proofLeaves.length; leafId++) {
+            if (treeLeaves.length > leafId) {
+                const proofLeaf = proofLeaves[leafId];
+                const treeLeaf = treeLeaves[leafId];
+                if (proofLeaf.key !== treeLeaf.key) {
+                    log.info('Keys do not match in leaf of tree');
+                    badKeyList.push(proofLeaf.key);
+                    badKeyList.push(treeLeaf.key);
+                } else if (proofLeaf.value !== treeLeaf.value) {
+                        badKeyList.push(proofLeaf.key);
+                        log.error('Hash mismatch on key ', proofLeaf.key);
+                    }
+                }
+            }
+        }
+
+    log.trace(badKeyList);
+    return (badKeyList);
+}
+
 async function lookupHederaDragonGlass(transactionId, network = 'mainnet', verbose = false) {
     if (verbose) {
         log.setLevel('trace');
@@ -395,4 +427,4 @@ async function lookupHederaDragonGlass(transactionId, network = 'mainnet', verbo
         log.error(response);
         return (false);
     }
-};
+}

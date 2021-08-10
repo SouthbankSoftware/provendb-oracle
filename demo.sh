@@ -3,6 +3,11 @@ provendb-oracle install --config=provendb.yaml --createDemoAccount --sysPassword
 
 provendb-oracle anchor --tables=PROVENDBDEMO.CONTRACTSTABLE 
 
+provendb-oracle anchor --tables=PROVENDBDEMO.CONTRACTSTABLE --columns="CONTRACTDATA,metadata"
+
+
+provendb-oracle anchor --tables=PROVENDBDEMO.CONTRACTSTABLE --columns="CONTRACTDATA,metadata" --keyColumn="CONTRACTID"
+
 provendb-oracle history --tables=PROVENDBDEMO.CONTRACTSTABLE --where=CONTRACTID=1
 
 provendb-oracle validate --rowId=AAASHaAAMAAAAlbAAA
@@ -39,15 +44,16 @@ provendb-oracle history --tables=PROVENDBDEMO.CONTRACTSTABLEFBDA --where=CONTRAC
 
 
 var request_id number
-
         DECLARE
             v_Return NUMBER;
         BEGIN
             :request_id:= F_ANCHORREQUEST(
-            TABLENAME => 'PROVENDBTEST1452DEMO.CONTRACTSTABLE' );
+            TABLENAME => 'PROVENDBDEMO.CONTRACTSTABLE',
+            WHERECLAUSE => 'CONTRACTID<10',
+            COLUMNLIST => 'CONTRACTDATA',
+            KEYCOLUMN => 'CONTRACTID' );
      
         END;
 /
-
 print request_id;
 
