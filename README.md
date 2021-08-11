@@ -22,7 +22,7 @@ $ npm install -g provendb-oracle
 $ provendb-oracle COMMAND
 running command...
 $ provendb-oracle (-v|--version|version)
-provendb-oracle/0.5.2 darwin-x64 node-v12.20.1
+provendb-oracle/0.6.1 darwin-x64 node-v12.20.1
 $ provendb-oracle --help [COMMAND]
 USAGE
   $ provendb-oracle COMMAND
@@ -50,20 +50,22 @@ USAGE
   $ provendb-oracle anchor
 
 OPTIONS
-  -v, --verbose        increased logging verbosity
-  --config=config      config file location
-  --includeRowIds      Include proofs for every row in the proof file
-  --includeScn         Include SCN into rowid signature (create historical proof)
-  --tables=tables      (required) tables to anchor
-  --validate=validate  Validate the proof and output to file
-  --where=where        WHERE clause to filter rows
+  -v, --verbose          increased logging verbosity
+  --columns=columns      columns to be included in the proof
+  --config=config        config file location
+  --includeRowIds        Include proofs for every row in the proof file
+  --includeScn           Include SCN into rowid signature (create historical proof)
+  --keyColumn=keyColumn  column to be used as key for the row data (default ROWID)
+  --tables=tables        (required) tables to anchor
+  --validate=validate    Validate the proof and output to file
+  --where=where          WHERE clause to filter rows
 
 DESCRIPTION
   Anchor reads the current state of selected table, filtered by an options WHERE 
   clause.  Rows are hashed and anchored to the blockchain.
 ```
 
-_See code: [src/commands/anchor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.2/src/commands/anchor.js)_
+_See code: [src/commands/anchor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.1/src/commands/anchor.js)_
 
 ## `provendb-oracle autocomplete [SHELL]`
 
@@ -126,7 +128,7 @@ DESCRIPTION
   Show the rowids and optionally SCNs for which we have anchored proofs
 ```
 
-_See code: [src/commands/history.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.2/src/commands/history.js)_
+_See code: [src/commands/history.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.1/src/commands/history.js)_
 
 ## `provendb-oracle install`
 
@@ -149,7 +151,7 @@ OPTIONS
   --sysPassword=sysPassword            SYS Password (instead of DBA username/password)
 ```
 
-_See code: [src/commands/install.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.2/src/commands/install.js)_
+_See code: [src/commands/install.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.1/src/commands/install.js)_
 
 ## `provendb-oracle monitor`
 
@@ -162,9 +164,10 @@ USAGE
 OPTIONS
   -i, --interval=interval  [default: 120] polling interval
   -m, --maxTime=maxTime    Maximum number of seconds to monitor
+  -r, --monitorRequests    monitor requests in the provendbRequests table
   -v, --verbose            increased logging verbosity
   --config=config          config file location
-  --tables=tables          (required) tables to anchor
+  --tables=tables          tables to anchor
 
 DESCRIPTION
   Monitor checks tables listed in the configuration file for changes.   
@@ -172,7 +175,7 @@ DESCRIPTION
   in the configuration file.
 ```
 
-_See code: [src/commands/monitor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.2/src/commands/monitor.js)_
+_See code: [src/commands/monitor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.1/src/commands/monitor.js)_
 
 ## `provendb-oracle validate`
 
@@ -188,7 +191,7 @@ OPTIONS
   --generateCertificate  Include PDF certificate with row proof
   --output=output        output file for proof
   --proofId=proofId      proofId to validate
-  --rowId=rowId          row ID to validate
+  --rowId=rowId          row ID (or key) to validate
 
 DESCRIPTION
   Validate compares the data in the database (or in the flashback archive) to the 
@@ -199,7 +202,7 @@ DESCRIPTION
   proof file can serve as an independent proof of the data.
 ```
 
-_See code: [src/commands/validate.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.5.2/src/commands/validate.js)_
+_See code: [src/commands/validate.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.1/src/commands/validate.js)_
 <!-- commandsstop -->
 
 <!-- build -->
