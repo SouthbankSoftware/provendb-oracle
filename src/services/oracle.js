@@ -245,7 +245,23 @@ module.exports = {
                     END; `
             );
             sqls.push(
-                `CREATE OR REPLACE FUNCTION f_anchorrequest (
+                `create or replace PACKAGE provendboracle IS 
+                FUNCTION fanchorrequest (
+                    tablename    VARCHAR2,
+                    columnlist   VARCHAR2 := '*',
+                    whereclause  VARCHAR2 := NULL,
+                    keyColumn    VARCHAR2 := 'ROWID'
+                ) RETURN provendbrequests.id%TYPE;
+                
+               FUNCTION fvalidateRequest (
+                    proofId    VARCHAR2 
+                ) RETURN provendbrequests.id%TYPE;
+             
+            END ;`
+            );
+            sqls.push(
+                `create or replace PACKAGE BODY provendboracle AS 
+                FUNCTION fanchorrequest (
                     tablename    VARCHAR2,
                     columnlist   VARCHAR2 := '*',
                     whereclause  VARCHAR2 := NULL,
@@ -254,38 +270,40 @@ module.exports = {
                     l_id    provendbrequests.id%TYPE;
                     l_json  VARCHAR2(4000);
                 BEGIN
-                    l_json := '{"table":"'
-                              || tablename
-                              || '"';
+                    l_json := '{"table":"' || tablename || '"';
                     IF columnlist IS NOT NULL THEN
-                        l_json := l_json
-                                  || ',"columns":"'
-                                  || columnlist
-                                  || '"';
+                        l_json := l_json || ',"columns":"' || columnlist || '"';
                     END IF;
                 
                     IF whereclause IS NOT NULL THEN
-                        l_json := l_json
-                                  || ',"where":"'
-                                  || whereclause
-                                  || '"';
+                        l_json := l_json || ',"where":"' || whereclause || '"';
                     END IF;
                     
                     IF keyColumn IS NOT NULL THEN 
-                            l_json := l_json
-                                  || ',"keyColumn":"'
-                                  || keyColumn
-                                  || '"';
+                            l_json := l_json  || ',"keyColumn":"' || keyColumn || '"';
                     END IF;
                 
                     l_json := l_json || '}';
-                    INSERT INTO provendbrequests ( requestjson ) VALUES ( l_json ) RETURNING id INTO l_id;
+                    INSERT INTO provendbrequests ( requesttype,requestjson ) VALUES ( 'ANCHOR',l_json ) RETURNING id INTO l_id;
                 
                     COMMIT;
                     RETURN ( l_id );
-                END;`
+                END;
+                
+                FUNCTION fvalidateRequest (
+                    proofId    VARCHAR2 
+                ) RETURN provendbrequests.id%TYPE IS
+                    l_id    provendbrequests.id%TYPE;
+                    l_json  VARCHAR2(4000);
+                BEGIN
+                    l_json:='{"proofId":"' ||proofId|| '"}';
+                    INSERT INTO provendbrequests ( requesttype, requestjson ) VALUES ( 'VALIDATE',l_json ) RETURNING id INTO l_id;
+                    COMMIT;
+                    RETURN ( l_id );
+                END;
+                
+            END;`
             );
-
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(oraConnection, sqls[s], false, verbose);
             }
@@ -845,16 +863,18 @@ module.exports = {
             });
             log.trace(result.rows.length, ' rows reprooved');
         } catch (error) {
-            log.error(error.message);
+            log.warn(error.message);
             if (error.errorNum === 30052) {
                 // We don't have flashback data since the last monitored sample
-                log.error('Insufficient flashback history to capture all changes since last sample');
+                log.warn('Insufficient flashback history to capture all changes since last sample');
                 log.info('Attempting to reproove current state');
                 sqlText = module.exports.firstTimeTableQuery(tableName);
                 result = await oraConnection.execute(sqlText, {
                     startscn: currentScn,
                     currentscn: currentScn,
                 });
+            } else {
+                log.error(error.message);
             }
         }
         // log.trace('Table Data ', result);

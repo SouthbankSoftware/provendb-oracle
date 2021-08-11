@@ -197,7 +197,6 @@ module.exports = {
             goodProof = true;
         } else {
             log.error(`FAIL: proof hash does not match data hash proof: ${proofRoot}, data: ${calculatedRoot}`);
-            console.log(tree);
             goodProof = false;
             badKeys = getBadKeys(proof, tree);
             log.trace(badKeys);

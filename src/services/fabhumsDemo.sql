@@ -38,7 +38,39 @@ UPDATE fabhums.event_payload
    SET CREATED_DATE=SYSDATE
 WHERE ID=14850;
 
+UPDATE fabhums.event_payload 
+   SET visible=visible*-1
+WHERE ID=14847;
+
 COMMIT;
+
+DECLARE
+    v_jsoncol      CLOB;
+    v_json_obj     json_object_t;
+    v_new_jsoncol  CLOB;
+BEGIN
+    SELECT
+        payload
+    INTO v_jsoncol
+    FROM
+        fabhums.event_payload
+    WHERE
+        id = 14850;
+
+    v_json_obj := TREAT(json_element_t.parse(v_jsoncol) AS json_object_t);
+    v_json_obj.put('newPLSQLData', dbms_random.value());
+    v_new_jsoncol := v_json_obj.to_clob;
+    
+    UPDATE fabhums.event_payload
+    SET
+        payload = v_new_jsoncol 
+    WHERE
+        id = 14849;
+    COMMIT;     
+
+END;
+/
+
 
 BEGIN
   :request_id := PROVENDB.PROVENDBORACLE.FVALIDATEREQUEST(
@@ -50,9 +82,13 @@ END;
 SELECT * FROM PROVENDB.PROVENDBREQUESTS WHERE ID=:request_id; 
 
 
+
+
+
+
 BEGIN
-  :request_id := PROVENDB.PROVENDBORACLE.FANCHORREQUEST(
-    TABLENAME => 'FABHUMS.EVENT_PAYLOAD'
+  :request_id := PROVENDB.PROVENDBORACLE.FVALIDATEREQUEST(
+    proofid => :proof_id
   );
 END;
 /
