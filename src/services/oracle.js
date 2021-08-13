@@ -304,6 +304,8 @@ module.exports = {
                 
             END;`
             );
+            sqls.push('GRANT EXECUTE ON provendboracle TO PUBLIC');
+            sqls.push('CREATE PUBLIC SYNONYM provendboracle FOR provendboracle');
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(oraConnection, sqls[s], false, verbose);
             }
@@ -516,6 +518,7 @@ module.exports = {
             // SQLs that might fail
             sqls = [`GRANT SELECT ANY TABLE TO ${provendbUser} `,
             `GRANT ALTER SESSION to ${provendbUser} `,
+            `GRANT CREATE PUBLIC SYNONYM to ${provendbUser} `,
             `GRANT FLASHBACK ANY TABLE  TO ${provendbUser} `,
             `GRANT execute_catalog_role TO ${provendbUser} `,
             `GRANT execute ON dbms_alert  TO ${provendbUser} `,
