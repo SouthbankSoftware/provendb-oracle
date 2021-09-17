@@ -22,7 +22,7 @@ $ npm install -g provendb-oracle
 $ provendb-oracle COMMAND
 running command...
 $ provendb-oracle (-v|--version|version)
-provendb-oracle/0.6.2 darwin-x64 node-v12.20.1
+provendb-oracle/0.6.3 darwin-x64 node-v12.20.1
 $ provendb-oracle --help [COMMAND]
 USAGE
   $ provendb-oracle COMMAND
@@ -65,7 +65,7 @@ DESCRIPTION
   clause.  Rows are hashed and anchored to the blockchain.
 ```
 
-_See code: [src/commands/anchor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.2/src/commands/anchor.js)_
+_See code: [src/commands/anchor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.3/src/commands/anchor.js)_
 
 ## `provendb-oracle autocomplete [SHELL]`
 
@@ -128,7 +128,7 @@ DESCRIPTION
   Show the rowids and optionally SCNs for which we have anchored proofs
 ```
 
-_See code: [src/commands/history.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.2/src/commands/history.js)_
+_See code: [src/commands/history.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.3/src/commands/history.js)_
 
 ## `provendb-oracle install`
 
@@ -151,7 +151,7 @@ OPTIONS
   --sysPassword=sysPassword            SYS Password (instead of DBA username/password)
 ```
 
-_See code: [src/commands/install.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.2/src/commands/install.js)_
+_See code: [src/commands/install.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.3/src/commands/install.js)_
 
 ## `provendb-oracle monitor`
 
@@ -162,12 +162,13 @@ USAGE
   $ provendb-oracle monitor
 
 OPTIONS
-  -i, --interval=interval  [default: 120] polling interval
-  -m, --maxTime=maxTime    Maximum number of seconds to monitor
-  -r, --monitorRequests    monitor requests in the provendbRequests table
-  -v, --verbose            increased logging verbosity
-  --config=config          config file location
-  --tables=tables          tables to anchor
+  -i, --interval=interval              [default: 120] polling interval
+  -m, --maxTime=maxTime                Maximum number of seconds to monitor
+  -r, --monitorRequests                monitor requests in the provendbRequests table
+  -v, --verbose                        increased logging verbosity
+  --config=config                      config file location
+  --tables=tables                      tables to anchor
+  --validateInterval=validateInterval  re-validate proofs which have not been validated after this many seconds
 
 DESCRIPTION
   Monitor checks tables listed in the configuration file for changes.   
@@ -175,7 +176,7 @@ DESCRIPTION
   in the configuration file.
 ```
 
-_See code: [src/commands/monitor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.2/src/commands/monitor.js)_
+_See code: [src/commands/monitor.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.3/src/commands/monitor.js)_
 
 ## `provendb-oracle validate`
 
@@ -202,7 +203,7 @@ DESCRIPTION
   proof file can serve as an independent proof of the data.
 ```
 
-_See code: [src/commands/validate.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.2/src/commands/validate.js)_
+_See code: [src/commands/validate.js](https://github.com/michaeljharrison/proofable-oracle/blob/v0.6.3/src/commands/validate.js)_
 <!-- commandsstop -->
 
 <!-- build -->

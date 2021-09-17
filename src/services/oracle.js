@@ -183,6 +183,7 @@ module.exports = {
                     proofType     VARCHAR2(30) NOT NULL,
                     whereclause VARCHAR2(2000),
                     metadata     VARCHAR2(4000) CHECK (metadata IS JSON),
+                    last_checked DATE,
                     CONSTRAINT table1_pk PRIMARY KEY ( proofid )
                         USING INDEX (
                             CREATE UNIQUE INDEX table1_pk ON
@@ -305,10 +306,19 @@ module.exports = {
             END;`
             );
             sqls.push('GRANT EXECUTE ON provendboracle TO PUBLIC');
-            sqls.push('CREATE PUBLIC SYNONYM provendboracle FOR provendboracle');
+            sqls.push('GRANT select,insert ON provendbrequests TO PUBLIC');
+ 
+
             for (let s = 0; s < sqls.length; s++) {
                 await module.exports.execSQL(oraConnection, sqls[s], false, verbose);
             }
+            // This might fail
+            await module.exports.execSQL(oraConnection,
+                'CREATE PUBLIC SYNONYM provendboracle FOR provendboracle',
+                955, verbose);
+                await module.exports.execSQL(oraConnection,
+                    'CREATE PUBLIC SYNONYM provendbrequests FOR provendbrequests',
+                    955, verbose);
         } catch (error) {
             log.error('Install provendb user failed: ', error.message);
             throw (error);
@@ -474,13 +484,15 @@ module.exports = {
         }
     },
     // Execute SQL with no result, ignoring all or certain errors.
-    execSQL: async (oraConnection, sqlText, ignoreErrors, verbose = false) => {
+    execSQL: async (oraConnection, sqlText, ignoreErrors = false, verbose = false) => {
         if (verbose) {
             log.trace('executing ', sqlText);
+            log.trace('ignoreErrors: ', ignoreErrors.toString(),' ', typeof ignoreErrors);
         }
         try {
             await oraConnection.execute(sqlText);
         } catch (error) {
+            log.trace(error.errorNum);
             if (ignoreErrors === false) {
                 log.error(error.message, ' while executing ', sqlText);
                 throw (error);
@@ -488,7 +500,7 @@ module.exports = {
                 || ignoreErrors === error.errorNum || ignoreErrors === true) {
                 log.info(error.message, ' handled while executing ', sqlText);
             } else {
-                log.error(error.message, ' while executing ', sqlText);
+                log.error(error.message, ' failed to handle while executing ', sqlText);
                 throw (error);
             }
         }
@@ -1675,7 +1687,7 @@ module.exports = {
                     message = `FAIL: Mismatch in data hashes for ${proofId} - see log`;
                     log.error(message);
                     messages.push(message);
-                    messages.push({badKeys:validateDataOut.badKeys});
+                    messages.push({ badKeys: validateDataOut.badKeys });
                     proofIsValid = false;
                 }
             } else {
@@ -1690,6 +1702,28 @@ module.exports = {
         } catch (error) {
             log.error(error.message);
             throw (error);
+        }
+    },
+    checkValidateInterval: async (validateInterval, verbose) => {
+        if (verbose) {
+            log.setLevel('trace');
+        }
+        log.info('Checking for overdue proof checks');
+        const sql = `WITH proofTimes AS (
+                    SELECT proofid,(CAST(current_timestamp AS DATE)-
+                           CAST(nvl(last_checked, end_time) AS DATE))* 24 * 60 * 60 secondsSinceCheck
+                      FROM provendbcontrol
+                    )
+                    SELECT proofid,secondsSinceCheck
+                    FROM proofTimes
+                    WHERE secondsSinceCheck>:1`;
+        const result = await oraConnection.execute(sql, [validateInterval]);
+        for (let ri = 0; ri < result.rows.length; ri++) {
+            const proofId = result.rows[ri][0];
+            const secondsSinceCheck = result.rows[ri][1];
+            log.info(`Proof ${proofId} not checked for ${secondsSinceCheck} seconds`);
+            const requestSql = 'DECLARE id number; BEGIN id:=provendboracle.fvalidaterequest(:1);END;';
+            await oraConnection.execute(requestSql, [proofId]);
         }
     },
     getProofDetails: async (proofId, verbose) => {
@@ -1845,6 +1879,12 @@ async function processValidateRequest(config, id, requestJson, verbose) {
         } else {
             await invalidateRequest(id, JSON.stringify(validateOracleProofOut.messages));
         }
+        await oraConnection.execute(
+            `UPDATE provendbcontrol 
+                SET last_checked=CURRENT_TIMESTAMP 
+              WHERE proofId=:1`, [proofId]
+        );
+        await oraConnection.commit;
     } catch (error) {
         log.error('Error processing request: ', error.message);
         await invalidateRequest(id, error.message);
