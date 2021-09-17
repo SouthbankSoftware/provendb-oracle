@@ -9,11 +9,10 @@ const {
     processTableChanges,
     checkTables,
     monitorSleep,
-    processRequests
+    processRequests,
+    checkValidateInterval
 } = require('../services/oracle');
-const {
-    connectToProofable
-} = require('../services/proofable');
+
 const {
     getConfig
 } = require('../services/config');
@@ -31,7 +30,8 @@ class MonitorCommand extends Command {
                 interval,
                 maxTime,
                 verbose,
-                monitorRequests
+                monitorRequests,
+                validateInterval
             } = flags;
 
             // Load Config
@@ -65,6 +65,9 @@ class MonitorCommand extends Command {
                 }
                 if (tables) {
                     await processTableChanges(config, tables);
+                }
+                if (validateInterval) {
+                    await checkValidateInterval(validateInterval, verbose);
                 }
                 if (monitorRequests) {
                     log.info('Looking for new requests in the provendbRequests table');
@@ -119,6 +122,11 @@ MonitorCommand.flags = {
     config: flags.string({
         string: 'c',
         description: 'config file location',
+        required: false
+    }),
+    validateInterval: flags.integer({
+        string: 'k',
+        description: 're-validate proofs which have not been validated after this many seconds',
         required: false
     })
 };
